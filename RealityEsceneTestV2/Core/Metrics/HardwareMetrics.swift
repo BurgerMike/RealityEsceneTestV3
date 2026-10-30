@@ -31,8 +31,10 @@ enum HardwareSampler {
         var gpuAvailable = false
     }
 
-    // Long-lived system handle, only ever read.
-    nonisolated(unsafe) private static let device = MTLCreateSystemDefaultDevice()
+    // Long-lived system handle, only ever read. MTLDevice is already Sendable,
+    // so plain `nonisolated` is enough — without it the default MainActor
+    // isolation of this target would put it out of reach of sample().
+    nonisolated private static let device = MTLCreateSystemDefaultDevice()
 
     nonisolated static var deviceName: String {
         device?.name ?? "No Metal device"
