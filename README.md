@@ -242,7 +242,7 @@ was drawing nothing at all.
 ---
 
 ## Links
-
+****
 - V1: [RealityKitGames](https://github.com/BurgerMike/RealityKitGames)
 - V2: [RealityEsceneTestV2](https://github.com/BurgerMike/RealityEsceneTestV2)
-- YouTube: [@RealityKitGames](https://youtube.com/@RealityKitGames)
+- YouTube: [@RealityKitGames](https://www.youtube.com/@SpatialWorkshop)
