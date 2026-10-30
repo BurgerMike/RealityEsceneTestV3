@@ -134,7 +134,7 @@ for a while because it was rendering an empty field.
 ## Run it
 
 ```bash
-open RealityEsceneTestV2.xcodeproj
+open RealityEsceneTestV3.xcodeproj
 ```
 
 Build **Release** for anything you intend to record or quote. A Debug build
@@ -150,7 +150,7 @@ Builds Release, runs every demo, prints a table. Each run measures itself and
 quits — no interaction. Individual runs:
 
 ```bash
-RealityEsceneTestV2.app/Contents/MacOS/RealityEsceneTestV2 \
+RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
   --scene physics --mode stress --quality ultra --benchmark 10
 ```
 
