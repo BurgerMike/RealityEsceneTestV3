@@ -42,6 +42,9 @@ RUNS=(
     "particles fire        ultra"
     "particles sparks      ultra"
     "audio     -           ultra"
+    "rendering portals     ultra"
+    "rendering materials   ultra"
+    "rendering surface     ultra"
 )
 
 for run in "${RUNS[@]}"; do
@@ -54,6 +57,7 @@ for run in "${RUNS[@]}"; do
     case "$scene" in
         physics)   selector_flag="--mode $selector" ;;
         particles) selector_flag="--effect $selector" ;;
+        rendering) selector_flag="--showcase $selector" ;;
         *)         selector_flag="" ;;
     esac
 
