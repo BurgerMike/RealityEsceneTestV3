@@ -71,18 +71,22 @@ for run in "${RUNS[@]}"; do
 done
 
 echo
+awk '/^ surface/ { s = substr($0, 13) } /^ display/ { print "Render surface: " s "  at  " substr($0, 13); exit }' "$RAW"
+echo
 printf "%-14s %-13s %8s %9s %9s %7s %6s %6s\n" \
     MODE PRESET AVG "1% LOW" P99 DROPPED CPU GPU
 printf '%.0s-' {1..78}; echo
 
 awk '
 /^ scene/   { mode = $NF }
+/^ display/ { display = substr($0, 13) }
 /^ preset/  { preset = $2 }
 /^ avg/     { avg = $2 }
 /^ 1% low/  { low = $3 }
 /^ p99/     { p99 = $2 }
 /^ dropped/ { dropped = $2 }
 /^ cpu/     { cpu = $2 }
+/^ INVALID/ { printf "%-14s %-13s %s\n", mode, preset, "  INVALID - window was throttled" }
 /^ gpu/     { gpu = $2
               printf "%-14s %-13s %8s %9s %9s %7s %6s %6s\n",
                      mode, preset, avg, low, p99, dropped, cpu, gpu }

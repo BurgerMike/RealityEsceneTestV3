@@ -43,6 +43,10 @@ final class FrameStats {
     // Normalised history for the HUD graph, oldest first.
     var graph: [Double] = []
 
+    // How many frames the window actually presented since the last reset.
+    // A run that gathered almost none was not slow; it was not drawing.
+    private(set) var recordedFrames = 0
+
     // The display's own ceiling — the demo is pointless without it, since
     // "120 FPS" only means something next to a 120 Hz panel.
     var displayRefreshRate: Int = 60
@@ -74,6 +78,7 @@ final class FrameStats {
         lastTimestamp = 0
         droppedFrames = 0
         warmupFrames = 0
+        recordedFrames = 0
     }
 
     // Called once per display-link callback with the link's timestamp.
@@ -90,6 +95,7 @@ final class FrameStats {
         }
 
         samples.append(deltaMS)
+        recordedFrames += 1
         if samples.count > capacity { samples.removeFirst(samples.count - capacity) }
         if deltaMS > frameBudgetMS { droppedFrames += 1 }
 
