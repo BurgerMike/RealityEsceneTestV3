@@ -21,12 +21,14 @@ struct RealityScene: View {
     // Submodes live here so MenuOverlay can read and write them.
     @State private var currentDemoMode: DemoMode = .balls
     @State private var currentParticleMode: ParticleMode = .rain
+    @State private var currentShowcaseMode: ShowcaseMode = .portals
 
     init(
         modoInicial: SceneMode,
         quality: QualityPreset,
         demoMode: DemoMode = .balls,
         particleMode: ParticleMode = .rain,
+        showcaseMode: ShowcaseMode = .portals,
         onVolver: @escaping () -> Void
     ) {
         self.modoInicial = modoInicial
@@ -36,6 +38,7 @@ struct RealityScene: View {
         _renderSettings = State(initialValue: RenderSettings(preset: quality))
         _currentDemoMode = State(initialValue: demoMode)
         _currentParticleMode = State(initialValue: particleMode)
+        _currentShowcaseMode = State(initialValue: showcaseMode)
     }
 
     var body: some View {
@@ -61,6 +64,13 @@ struct RealityScene: View {
                     currentParticleMode: $currentParticleMode,
                     renderSettings: $renderSettings
                 )
+            case .rendering:
+                RenderShowcaseScene(
+                    controller: controller,
+                    isMenuOpen: $isMenuOpen,
+                    currentShowcaseMode: $currentShowcaseMode,
+                    renderSettings: $renderSettings
+                )
             }
 
             if isMenuOpen {
@@ -70,6 +80,7 @@ struct RealityScene: View {
                     onVolver: onVolver,
                     currentDemoMode: $currentDemoMode,
                     currentParticleMode: $currentParticleMode,
+                    currentShowcaseMode: $currentShowcaseMode,
                     renderSettings: $renderSettings,
                     onDemoModeSelected: { mode in
                         currentDemoMode = mode
@@ -77,6 +88,10 @@ struct RealityScene: View {
                     },
                     onParticleModeSelected: { mode in
                         currentParticleMode = mode
+                        resumeScene()
+                    },
+                    onShowcaseModeSelected: { mode in
+                        currentShowcaseMode = mode
                         resumeScene()
                     }
                 )

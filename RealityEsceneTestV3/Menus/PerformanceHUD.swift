@@ -32,6 +32,9 @@ struct PerformanceHUD: View {
     let quality: QualityPreset
     let extraStats: [HUDStat]
     var expanded: Bool = true
+    // What E does here. Physics fires a projectile; the material lab steps
+    // through shading channels.
+    var actionKeyHint: String = "fire"
 
     private var info: SystemInfo { .current }
 
@@ -118,7 +121,7 @@ struct PerformanceHUD: View {
         VStack(alignment: .leading, spacing: 4) {
             keyRow("WASD", "move")
             keyRow("SHIFT", "sprint")
-            keyRow("E", "fire")
+            keyRow("E", actionKeyHint)
             keyRow("TAB", "menu")
             keyRow("1 2 3", "quality")
             keyRow("R", "reload")

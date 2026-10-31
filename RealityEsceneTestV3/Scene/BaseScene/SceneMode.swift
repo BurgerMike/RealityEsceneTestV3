@@ -7,6 +7,7 @@ enum SceneMode: Hashable, CaseIterable {
     case audioMovement
     case fisica
     case particles
+    case rendering
 }
 
 extension SceneMode {
@@ -15,6 +16,7 @@ extension SceneMode {
         case .audioMovement: return "🔊 SPATIAL AUDIO"
         case .fisica:        return "🎮 PHYSICS"
         case .particles:     return "✨ PARTICLES"
+        case .rendering:     return "🪟 RENDERING"
         }
     }
 
@@ -23,6 +25,7 @@ extension SceneMode {
         case .audioMovement: return "🔊"
         case .fisica:        return "🎮"
         case .particles:     return "✨"
+        case .rendering:     return "🪟"
         }
     }
 
@@ -31,6 +34,7 @@ extension SceneMode {
         case .audioMovement: return "Spatial Audio"
         case .fisica:        return "Physics & Instancing"
         case .particles:     return "Particle VFX"
+        case .rendering:     return "Rendering"
         }
     }
 
@@ -42,6 +46,8 @@ extension SceneMode {
             return "Seven demos, from mass and restitution up to articulated chains, 512 rigid bodies and 40 000 GPU instances."
         case .particles:
             return "Four effects built on the full emitter parameter set — noise fields, vortex, spawned emitters."
+        case .rendering:
+            return "Windows onto separate worlds, and a PBR material taken apart one shading channel at a time."
         }
     }
 
@@ -54,6 +60,8 @@ extension SceneMode {
             return ["PhysicsSimulationComponent", "ForceEffectComponent", "MeshInstancesComponent", "ECS sleep + wake"]
         case .particles:
             return ["ParticleEmitterComponent", "Additive blending", "Spawned emitters", "Lit particles"]
+        case .rendering:
+            return ["PortalComponent", "WorldComponent", "ModelDebugOptionsComponent", "Per-world lighting"]
         }
     }
 }

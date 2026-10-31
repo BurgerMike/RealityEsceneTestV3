@@ -110,6 +110,7 @@ final class SceneRuntime {
         case .fisica:        scene = "physics / \(options.demoMode)"
         case .particles:     scene = "particles / \(options.particleMode)"
         case .audioMovement: scene = "audio"
+        case .rendering:     scene = "rendering / \(options.showcaseMode)"
         case nil:            scene = "menu"
         }
 

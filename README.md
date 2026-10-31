@@ -59,6 +59,20 @@ Three looping sources, one per axis, with the camera set as
 source emits a visible shell, because a recording of a spatial audio demo
 otherwise shows three spheres sliding around in silence.
 
+### Windows onto other worlds
+
+`WorldComponent` takes an entity and its descendants out of the default world:
+they render nowhere except through a `PortalComponent` that targets them. Each
+of the three worlds here has its own floor, its own lights and its own palette.
+
+### A PBR material, one channel at a time
+
+`ModelDebugOptionsComponent` replaces an entity's shading with a single channel
+of it. Stepping through base colour, normals, roughness, metallic, clearcoat
+and the diffuse and specular lighting terms on a row of deliberately different
+materials shows *why* car paint and brushed metal catch light the way they do.
+Press **E** to advance a channel.
+
 Plus: mass and restitution, breakable glass, tower collapse, vortex and
 turbulence force fields, and four particle effects.
 
@@ -156,9 +170,11 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 
 | Flag | Values |
 |---|---|
-| `--scene` | `physics` · `particles` · `audio` |
+| `--scene` | `physics` · `particles` · `audio` · `rendering` |
 | `--mode` | `balls` · `breakable` · `tower` · `joints` · `forcefield` · `stress` · `instancing` |
 | `--effect` | `rain` · `snow` · `fire` · `sparks` |
+| `--showcase` | `portals` · `materials` |
+| `--channel` | `basecolor` · `normal` · `roughness` · `metallic` · `clearcoat` · `ao` · `diffuse` · `specular` |
 | `--quality` | `performance` · `balanced` · `ultra` |
 | `--benchmark` | seconds to measure, then print and quit |
 
@@ -189,6 +205,8 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 | `LevelOfDetailComponent` | the skyline swaps between three detail levels by camera distance |
 | `PhysicallyBasedMaterial` | clearcoat, anisotropy, specular, emissive |
 | `TextComponent` + `BillboardComponent` | in-world captions that always face the camera |
+| `PortalComponent` + `WorldComponent` | three windows onto three separate worlds, each with its own floor and lights |
+| `ModelDebugOptionsComponent` | a PBR material taken apart one shading channel at a time |
 
 ### Physics
 

@@ -12,9 +12,11 @@ struct MenuOverlay: View {
     let onVolver: () -> Void
     @Binding var currentDemoMode: DemoMode
     @Binding var currentParticleMode: ParticleMode
+    @Binding var currentShowcaseMode: ShowcaseMode
     @Binding var renderSettings: RenderSettings
     let onDemoModeSelected: ((DemoMode) -> Void)?
     let onParticleModeSelected: ((ParticleMode) -> Void)?
+    let onShowcaseModeSelected: ((ShowcaseMode) -> Void)?
 
     var body: some View {
         ZStack {
@@ -57,6 +59,20 @@ struct MenuOverlay: View {
                                     title: mode.label,
                                     subtitle: mode.hint,
                                     isSelected: currentParticleMode == mode
+                                ) {
+                                    onSelect(mode)
+                                    isMenuOpen = false
+                                }
+                            }
+                        }
+
+                    case .rendering:
+                        if let onSelect = onShowcaseModeSelected {
+                            ForEach(ShowcaseMode.allCases, id: \.self) { mode in
+                                ModeButton(
+                                    title: mode.label,
+                                    subtitle: mode.hint,
+                                    isSelected: currentShowcaseMode == mode
                                 ) {
                                     onSelect(mode)
                                     isMenuOpen = false

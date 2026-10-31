@@ -18,6 +18,8 @@ struct LaunchOptions: Sendable {
     var scene: SceneMode?
     var demoMode: DemoMode = .balls
     var particleMode: ParticleMode = .rain
+    var showcaseMode: ShowcaseMode = .portals
+    var materialChannel: MaterialChannel = .final
     var quality: QualityPreset = .ultra
 
     // Seconds to run before printing a summary and quitting. 0 = normal run.
@@ -36,6 +38,7 @@ struct LaunchOptions: Sendable {
         case "physics", "fisica": scene = .fisica
         case "particles":         scene = .particles
         case "audio":             scene = .audioMovement
+        case "rendering", "render": scene = .rendering
         default:                  scene = nil
         }
 
@@ -54,6 +57,15 @@ struct LaunchOptions: Sendable {
         case "fire":   particleMode = .fire
         case "sparks": particleMode = .sparks
         default:       particleMode = .rain
+        }
+
+        switch value("--showcase") {
+        case "materials", "material": showcaseMode = .materials
+        default:                      showcaseMode = .portals
+        }
+
+        if let name = value("--channel"), let parsed = MaterialChannel.named(name) {
+            materialChannel = parsed
         }
 
         switch value("--quality") {

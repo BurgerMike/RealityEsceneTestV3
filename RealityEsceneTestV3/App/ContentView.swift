@@ -23,7 +23,8 @@ struct ContentView: View {
                 modoInicial: modo,
                 quality: quality,
                 demoMode: options.demoMode,
-                particleMode: options.particleMode
+                particleMode: options.particleMode,
+                showcaseMode: options.showcaseMode
             ) {
                 NSCursor.unhide()
                 CGAssociateMouseAndMouseCursorPosition(1)
