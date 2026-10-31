@@ -15,11 +15,13 @@ import RealityKit
 enum ShowcaseMode: CaseIterable {
     case portals
     case materials
+    case surface
 
     var label: String {
         switch self {
         case .portals:   return "🪟  Portals"
         case .materials: return "🎨  Material Lab"
+        case .surface:   return "🌊  Procedural Mesh"
         }
     }
 
@@ -27,6 +29,7 @@ enum ShowcaseMode: CaseIterable {
         switch self {
         case .portals:   return "three windows onto three separate worlds"
         case .materials: return "press E to step through the PBR channels"
+        case .surface:   return "every vertex written by a compute kernel, every frame"
         }
     }
 
@@ -34,6 +37,7 @@ enum ShowcaseMode: CaseIterable {
         switch self {
         case .portals:   return "PortalComponent · WorldComponent"
         case .materials: return "ModelDebugOptionsComponent"
+        case .surface:   return "LowLevelMesh · Metal compute"
         }
     }
 
@@ -41,6 +45,7 @@ enum ShowcaseMode: CaseIterable {
         switch self {
         case .portals:   return "—"
         case .materials: return "channel"
+        case .surface:   return "—"
         }
     }
 }
@@ -61,6 +66,9 @@ struct RenderShowcaseScene: View {
     @State private var samples: [ModelEntity] = []
     @State private var channel: MaterialChannel = .final
     @State private var portalCount = 0
+    @State private var surfaceVertices = 0
+    @State private var surfaceTriangles = 0
+    @State private var surfaceOnGPU = false
     @State private var hudExpanded = true
 
     var body: some View {
@@ -97,6 +105,12 @@ struct RenderShowcaseScene: View {
                 )
                 runtime.bindMenuToggle(controller: controller, isMenuOpen: $isMenuOpen)
                 bindKeys()
+
+                // Sampled rather than assumed: the kernel may not have loaded.
+                runtime.onFrame = { _ in
+                    guard currentShowcaseMode == .surface else { return }
+                    surfaceOnGPU = ProceduralSurfaceSystem.onGPU
+                }
             }
             .onDisappear {
                 runtime.stop(controller: controller)
@@ -136,6 +150,15 @@ struct RenderShowcaseScene: View {
                 HUDStat(label: "", value: channel.explanation, tint: .white.opacity(0.55)),
                 HUDStat(label: "SAMPLES", value: "\(samples.count)")
             ]
+
+        case .surface:
+            return [
+                HUDStat(label: "VERTICES", value: surfaceVertices.formatted(), tint: .cyan),
+                HUDStat(label: "TRIANGLES", value: surfaceTriangles.formatted(), tint: .cyan),
+                HUDStat(label: "REBUILT",
+                        value: surfaceOnGPU ? "GPU, every frame" : "not running",
+                        tint: surfaceOnGPU ? .green : .orange)
+            ]
         }
     }
 
@@ -144,6 +167,9 @@ struct RenderShowcaseScene: View {
         activeEntities = []
         samples = []
         portalCount = 0
+        surfaceVertices = 0
+        surfaceTriangles = 0
+        surfaceOnGPU = false
         channel = LaunchOptions.current.materialChannel
 
         switch mode {
@@ -157,6 +183,12 @@ struct RenderShowcaseScene: View {
             activeEntities = result.entities
             samples = result.samples
             applyChannel(channel, to: samples)
+
+        case .surface:
+            let result = setupProceduralSurface(in: rig)
+            activeEntities = result.entities
+            surfaceVertices = result.vertexCount
+            surfaceTriangles = result.triangleCount
         }
     }
 

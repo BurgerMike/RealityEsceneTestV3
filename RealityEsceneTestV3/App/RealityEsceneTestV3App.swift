@@ -21,6 +21,8 @@ struct RealityEsceneTestV3App: App {
         AudioPulseSystem.registerSystem()
         SpinComponent.registerComponent()
         SpinSystem.registerSystem()
+        ProceduralSurfaceComponent.registerComponent()
+        ProceduralSurfaceSystem.registerSystem()
 
         // Built-in force effects used by the force field demo.
         VortexForceEffect.register()

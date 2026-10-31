@@ -73,6 +73,17 @@ and the diffuse and specular lighting terms on a row of deliberately different
 materials shows *why* car paint and brushed metal catch light the way they do.
 Press **E** to advance a channel.
 
+### A mesh with no vertices on the CPU
+
+`LowLevelMesh` lets you declare a vertex layout and own the memory.
+`replace(bufferIndex:using:)` hands that memory back as an `MTLBuffer`, so the
+36 864 positions and normals of this surface are written by a compute kernel on
+the same GPU that is about to draw them. The indices are written once — the
+grid's topology never changes — and nothing is ever uploaded: the only thing
+crossing from Swift is nine floats of parameters. Normals come from central
+differences on the height field rather than from averaging face normals, which
+is cheaper and leaves no seams.
+
 Plus: mass and restitution, breakable glass, tower collapse, vortex and
 turbulence force fields, and four particle effects.
 
@@ -173,7 +184,7 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 | `--scene` | `physics` · `particles` · `audio` · `rendering` |
 | `--mode` | `balls` · `breakable` · `tower` · `joints` · `forcefield` · `stress` · `instancing` |
 | `--effect` | `rain` · `snow` · `fire` · `sparks` |
-| `--showcase` | `portals` · `materials` |
+| `--showcase` | `portals` · `materials` · `surface` |
 | `--channel` | `basecolor` · `normal` · `roughness` · `metallic` · `clearcoat` · `ao` · `diffuse` · `specular` |
 | `--quality` | `performance` · `balanced` · `ultra` |
 | `--benchmark` | seconds to measure, then print and quit |
@@ -207,6 +218,7 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 | `TextComponent` + `BillboardComponent` | in-world captions that always face the camera |
 | `PortalComponent` + `WorldComponent` | three windows onto three separate worlds, each with its own floor and lights |
 | `ModelDebugOptionsComponent` | a PBR material taken apart one shading channel at a time |
+| `LowLevelMesh` | a 36 864-vertex surface whose positions and normals are rewritten by a Metal compute kernel every frame |
 
 ### Physics
 
@@ -236,9 +248,11 @@ the first 45 frames after a scene loads are discarded.
 
 - Requires **macOS 27**. Bloom, tone mapping, `LevelOfDetailComponent` and
   runtime `EnvironmentResource` creation are macOS 27 APIs.
-- Everything renders on Metal, because RealityKit renders on Metal. There are
-  no hand-written `.metal` shaders here — direct Metal use is limited to
-  querying the device for its name and allocated memory.
+- Everything renders on Metal, because RealityKit renders on Metal. Two compute
+  kernels here are hand-written: one fills the instancing field's 40 000
+  transforms, the other builds the procedural surface's vertices. Both reach
+  the GPU through the `replace(using:)` pattern RealityKit exposes on
+  `LowLevelInstanceData` and `LowLevelMesh`, so nothing is uploaded per frame.
 - The target builds with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; anything
   that must leave the main actor says `nonisolated` explicitly.
 

@@ -61,6 +61,7 @@ struct LaunchOptions: Sendable {
 
         switch value("--showcase") {
         case "materials", "material": showcaseMode = .materials
+        case "surface", "mesh":       showcaseMode = .surface
         default:                      showcaseMode = .portals
         }
 
