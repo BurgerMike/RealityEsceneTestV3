@@ -24,7 +24,10 @@ import Observation
 enum HardwareSampler {
 
     struct Snapshot: Sendable {
+        // Percentage of the whole machine, 0...100.
         var cpuUsage: Double = 0
+        // Cores' worth of work, which is what the kernel actually reports.
+        var cpuCores: Double = 0
         var gpuUtilization: Double = 0
         var allocatedBytes: UInt64 = 0
         var deviceBytes: UInt64 = 0
@@ -42,7 +45,14 @@ enum HardwareSampler {
 
     nonisolated static func sample() -> Snapshot {
         var snapshot = Snapshot()
-        snapshot.cpuUsage       = processCPUUsage()
+        // thread_basic_info reports each thread as a fraction of ONE core, so
+        // the sum is "cores used", not "percent of this Mac". Reporting the
+        // raw sum made a demo using half a core read as though it were using
+        // half the machine — and clamping it at 100 would have hidden an app
+        // genuinely using five cores. Both numbers are kept.
+        let cores = processCoresUsed()
+        snapshot.cpuCores = cores
+        snapshot.cpuUsage = min(cores / Double(max(logicalCoreCount, 1)) * 100, 100)
         snapshot.allocatedBytes = UInt64(device?.currentAllocatedSize ?? 0)
 
         guard let stats = acceleratorStatistics() else { return snapshot }
@@ -69,9 +79,16 @@ enum HardwareSampler {
 
     // MARK: CPU
 
-    // Sum of per-thread CPU usage for this process, as a percentage of one
-    // core — the same number Activity Monitor shows for an app.
-    nonisolated private static func processCPUUsage() -> Double {
+    nonisolated private static let logicalCoreCount: Int = {
+        var value: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        guard sysctlbyname("hw.ncpu", &value, &size, nil, 0) == 0 else { return 1 }
+        return Int(value)
+    }()
+
+    // Cores' worth of CPU this process is using: 1.0 means one core saturated.
+    // This is the same quantity Activity Monitor shows as a percentage per app.
+    nonisolated private static func processCoresUsed() -> Double {
         var threadList: thread_act_array_t?
         var threadCount = mach_msg_type_number_t(0)
 
@@ -96,9 +113,9 @@ enum HardwareSampler {
                 }
             }
             guard result == KERN_SUCCESS else { continue }
-            total += Double(info.cpu_usage) / Double(TH_USAGE_SCALE) * 100
+            total += Double(info.cpu_usage) / Double(TH_USAGE_SCALE)
         }
-        return min(total, 100)
+        return total
     }
 
     // MARK: GPU
@@ -134,6 +151,7 @@ enum HardwareSampler {
 final class HardwareMetrics {
 
     var cpuUsage: Double = 0
+    var cpuCores: Double = 0
     var gpuUtilization: Double = 0
     var allocatedBytes: UInt64 = 0
     var deviceBytes: UInt64 = 0
@@ -174,6 +192,7 @@ final class HardwareMetrics {
 
     private func apply(_ snapshot: HardwareSampler.Snapshot) {
         cpuUsage       = snapshot.cpuUsage
+        cpuCores       = snapshot.cpuCores
         gpuUtilization = snapshot.gpuUtilization
         allocatedBytes = snapshot.allocatedBytes
         deviceBytes    = snapshot.deviceBytes

@@ -202,7 +202,10 @@ struct PerformanceHUD: View {
 
             divider
 
-            statRow("CPU", String(format: "%.0f%%", hardware.cpuUsage))
+            // Percent of the machine, with the cores it works out to, so the
+            // number cannot be misread as "half this Mac".
+            statRow("CPU", String(format: "%.0f%%  (%.1f core)",
+                                  hardware.cpuUsage, hardware.cpuCores))
             if hardware.gpuAvailable {
                 statRow("GPU", String(format: "%.0f%%", hardware.gpuUtilization))
             }

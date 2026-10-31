@@ -144,6 +144,12 @@ to 114 in isolation, and none of them were about the hardware:
 | 6 solver iterations, no redundant component writes | 92.2 |
 | collision wake handled inline instead of a `Task` per contact | 114.3 |
 
+Clearcoat is the same kind of trap. On the procedural surface, which covers
+most of the lower screen, a `clearcoat` of 0.6 cost **48 fps against 118** —
+the second specular lobe is evaluated per pixel, and on a surface already
+metallic and smooth it was invisible. One material parameter, 2.4x the frame
+rate.
+
 The rounded-corner box was the big one. It carries a far heavier triangle
 count than a plain box, and with every cube also drawn once per shadow
 cascade, that single parameter cost more than everything else combined.

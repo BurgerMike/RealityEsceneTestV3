@@ -128,7 +128,8 @@ final class SceneRuntime {
         row("frame", String(format: "%.2f ms", 1000 / max(frameStats.averageFPS, 0.001)))
         row("p99", String(format: "%.2f ms", frameStats.p99FrameTimeMS))
         row("dropped", "\(frameStats.droppedFrames)")
-        row("cpu", String(format: "%.0f%%", hardware.cpuUsage))
+        row("cpu", String(format: "%.0f%% of machine (%.2f cores)",
+                          hardware.cpuUsage, hardware.cpuCores))
         row("gpu", String(format: "%.0f%%", hardware.gpuUtilization))
         row("alloc", "\(hardware.allocatedBytes / 1_048_576) MB")
         print("-----------------------------------------------")

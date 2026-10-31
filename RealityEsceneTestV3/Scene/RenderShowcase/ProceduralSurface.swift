@@ -38,7 +38,7 @@ struct ProceduralSurfaceComponent: Component {
     let spacing: Float
 
     var time: Float = 0
-    var amplitude: Float = 0.55
+    var amplitude: Float = 0.62
     var frequency: Float = 0.38
     var speed: Float = 1.1
 }
@@ -165,9 +165,9 @@ struct ProceduralSurfaceResult {
 @MainActor
 func setupProceduralSurface(
     in rig: SceneRig,
-    columns: Int = 192,
-    rows: Int = 192,
-    spacing: Float = 0.11
+    columns: Int = 240,
+    rows: Int = 160,
+    spacing: Float = 0.10
 ) -> ProceduralSurfaceResult {
 
     let vertexCount = columns * rows
@@ -243,14 +243,19 @@ func setupProceduralSurface(
     material.baseColor = .init(tint: .init(red: 0.12, green: 0.42, blue: 0.68, alpha: 1))
     material.roughness = .init(floatLiteral: 0.18)
     material.metallic  = .init(floatLiteral: 0.85)
-    material.clearcoat = .init(floatLiteral: 0.6)
-    material.clearcoatRoughness = .init(floatLiteral: 0.1)
+    // No clearcoat. On a surface that is already metallic and smooth the
+    // second specular lobe is invisible, and it is evaluated for every pixel
+    // the swell covers — which is most of the lower screen.
     // Both sides: the swell lifts above eye level and you end up under it.
     material.faceCulling = .none
 
     let entity = ModelEntity(mesh: resource, materials: [material])
     entity.name = "proceduralSurface"
-    entity.position = [0, 1.1, 0]
+    // In front of the player, not under them. Centred on the origin the
+    // surface reached the camera's own feet, so the nearest polygons filled
+    // the frame and there was no way to see the swell as a whole. Pushed back,
+    // it starts a few metres out and recedes.
+    entity.position = [0, 0.95, -8]
     entity.components.set(ProceduralSurfaceComponent(
         mesh: mesh,
         columns: columns,
