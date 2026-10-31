@@ -61,19 +61,27 @@ otherwise shows three spheres sliding around in silence.
 
 ### Windows onto other worlds
 
+![Portals](docs/portals.jpg)
+
 `WorldComponent` takes an entity and its descendants out of the default world:
 they render nowhere except through a `PortalComponent` that targets them. Each
 of the three worlds here has its own floor, its own lights and its own palette.
 
 ### A PBR material, one channel at a time
 
-`ModelDebugOptionsComponent` replaces an entity's shading with a single channel
+![Material lab](docs/materials.jpg)
+
+The roughness channel, above: the polished sphere and the glass read almost
+black because they are mirrors, the rough one almost white because it scatters
+light wide. `ModelDebugOptionsComponent` replaces an entity's shading with a single channel
 of it. Stepping through base colour, normals, roughness, metallic, clearcoat
 and the diffuse and specular lighting terms on a row of deliberately different
 materials shows *why* car paint and brushed metal catch light the way they do.
 Press **E** to advance a channel.
 
 ### A mesh with no vertices on the CPU
+
+![Procedural mesh](docs/surface.jpg)
 
 `LowLevelMesh` lets you declare a vertex layout and own the memory.
 `replace(bufferIndex:using:)` hands that memory back as an `MTLBuffer`, so the
