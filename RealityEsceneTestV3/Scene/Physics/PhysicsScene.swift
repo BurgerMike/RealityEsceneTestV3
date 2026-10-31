@@ -35,6 +35,7 @@ struct PhysicsScene: View {
     @State private var instanceCount = 0
     @State private var drawCalls = 0
     @State private var jointCount = 0
+    @State private var transformsOnGPU = false
     @State private var lodBands: [Int] = [0, 0, 0]
     @State private var statsCounter = 0
     @State private var hudExpanded = true
@@ -145,6 +146,13 @@ struct PhysicsScene: View {
                                 value: instanceCount.formatted(),
                                 tint: .cyan))
             rows.append(HUDStat(label: "DRAW CALLS", value: "\(drawCalls)", tint: .cyan))
+            // Says which path built the transforms this frame rather than
+            // assuming the Metal kernel loaded.
+            rows.append(HUDStat(
+                label: "TRANSFORMS",
+                value: transformsOnGPU ? "GPU compute" : "CPU",
+                tint: transformsOnGPU ? .green : .orange
+            ))
         } else if bodyCount > 0 {
             rows.append(HUDStat(label: "RIGID BODIES", value: "\(bodyCount + projectiles.count)"))
             if sleepingCount > 0 {
@@ -182,6 +190,7 @@ struct PhysicsScene: View {
 
         if currentDemoMode == .instancing {
             instanceCount = InstanceFieldSystem.animatedInstances
+            transformsOnGPU = InstanceFieldSystem.usesGPUTransforms
         }
 
         // Which LOD band each tower is in, using the same thresholds the

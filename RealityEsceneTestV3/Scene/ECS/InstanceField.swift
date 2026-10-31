@@ -39,6 +39,9 @@ struct InstanceFieldComponent: Component {
     // something you stand inside.
     var amplitude: Float = 0.85
     var spin: Float = 0.9
+    // How far the whole field sits above the floor. Shared with the Metal
+    // kernel, which has to produce exactly the same field as the CPU path.
+    var heightOffset: Float = 0.06
 }
 
 // MARK: - Transform writing
@@ -98,6 +101,9 @@ struct InstanceFieldSystem: System {
     // Instances rewritten on the last frame — reported by the HUD.
     @MainActor static var animatedInstances = 0
 
+    // Which path actually ran, so the HUD can say so rather than claim it.
+    @MainActor static var usesGPUTransforms = false
+
     init(scene: RealityKit.Scene) { }
 
     func update(context: SceneUpdateContext) {
@@ -110,6 +116,13 @@ struct InstanceFieldSystem: System {
 
         var animated = 0
 
+        // One command buffer for every band. The GPU fills the instance
+        // storage in place through LowLevelInstanceData.replace(using:), and
+        // RealityKit waits on this buffer before it renders from it.
+        let gpu = InstanceFieldGPU.shared
+        let commandBuffer = gpu?.queue.makeCommandBuffer()
+        var encodedOnGPU = false
+
         // performQuery rather than entities(matching:updatingSystemWhen:
         // .rendering). The only available condition is `.rendering`, and
         // gating this system on it is circular: the instances are not drawn
@@ -121,11 +134,22 @@ struct InstanceFieldSystem: System {
             field.time += Float(context.deltaTime)
             entity.components[InstanceFieldComponent.self] = field
 
-            writeInstanceTransforms(field, cameraXZ: cameraXZ)
+            if let gpu, let commandBuffer,
+               gpu.encode(field: field, cameraXZ: cameraXZ, into: commandBuffer) {
+                encodedOnGPU = true
+            } else {
+                // No Metal device, no compiled kernel, or the encoder could
+                // not be made: fall back to building the field in Swift.
+                writeInstanceTransforms(field, cameraXZ: cameraXZ)
+            }
+
             animated += field.columns * field.rows
         }
 
+        if encodedOnGPU { commandBuffer?.commit() }
+
         Self.animatedInstances = animated
+        Self.usesGPUTransforms = encodedOnGPU
     }
 }
 
