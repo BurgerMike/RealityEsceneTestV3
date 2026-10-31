@@ -194,7 +194,10 @@ struct PerformanceHUD: View {
             statRow("AVG", String(format: "%.0f fps", stats.averageFPS))
             statRow("1% LOW", String(format: "%.0f fps", stats.onePercentLowFPS),
                     tint: stats.onePercentLowFPS < Double(stats.displayRefreshRate) * 0.5 ? .orange : .white)
-            statRow("FRAME", String(format: "%.2f ms", stats.frameTimeMS))
+            // Named "LAST" because it is the frame that just went by, while
+            // the headline rate above is the last half second. Without the
+            // label the two look like they disagree.
+            statRow("LAST FRAME", String(format: "%.2f ms", stats.frameTimeMS))
             statRow("P99", String(format: "%.2f ms", stats.p99FrameTimeMS))
             if stats.droppedFrames > 0 {
                 statRow("DROPPED", "\(stats.droppedFrames)", tint: .orange)

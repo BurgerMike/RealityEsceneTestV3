@@ -26,6 +26,13 @@ final class FrameStats {
 
     // Current values, refreshed at most 10 times a second so the HUD text is
     // readable instead of flickering.
+    //
+    // fps is smoothed over the last half second, not the last frame. The raw
+    // reciprocal of one frame interval is the jumpiest number a HUD can show:
+    // once a scene stops holding 120 Hz, vsync drops it to 60, so single
+    // frames read as either 120 or 60 and nothing between, while the real
+    // rate sits somewhere in the middle. It is also why this panel used to
+    // disagree with Xcode's FPS gauge, which smooths its own reading.
     var fps: Double = 0
     var frameTimeMS: Double = 0
     var averageFPS: Double = 0
@@ -92,10 +99,20 @@ final class FrameStats {
     }
 
     private func publish(latest: Double) {
+        // The real cost of the frame that just went by, untouched. The
+        // headline rate below is smoothed so it stops snapping between the
+        // panel's rate and half of it, but this row stays raw: it is what the
+        // machine actually just did, and averaging it away would hide the
+        // spikes the graph and the percentiles exist to show.
         frameTimeMS = latest
-        fps = 1000 / latest
 
         guard !samples.isEmpty else { return }
+
+        // Headline rate: mean frame time over roughly the last half second.
+        let smoothingWindow = max(8, Int(Double(displayRefreshRate) * 0.5))
+        let recent = samples.suffix(smoothingWindow)
+        let recentMean = recent.reduce(0, +) / Double(recent.count)
+        fps = 1000 / recentMean
 
         let mean = samples.reduce(0, +) / Double(samples.count)
         averageFPS = 1000 / mean
