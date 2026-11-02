@@ -21,6 +21,7 @@ struct RealityEsceneTestV3App: App {
         AudioPulseSystem.registerSystem()
         SpinComponent.registerComponent()
         SpinSystem.registerSystem()
+        TargetComponent.registerComponent()
         ProceduralSurfaceComponent.registerComponent()
         ProceduralSurfaceSystem.registerSystem()
 

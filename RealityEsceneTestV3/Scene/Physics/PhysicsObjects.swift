@@ -28,6 +28,7 @@ enum DemoMode: CaseIterable {
     case forceField
     case towerStress
     case instancing
+    case shooter
 
     var label: String {
         switch self {
@@ -38,6 +39,7 @@ enum DemoMode: CaseIterable {
         case .forceField:  return "🌪  Force Fields"
         case .towerStress: return "⚡  Physics Stress"
         case .instancing:  return "🧊  GPU Instancing"
+        case .shooter:     return "🎯  Shooting Range"
         }
     }
 
@@ -50,6 +52,7 @@ enum DemoMode: CaseIterable {
         case .forceField:  return "ForceEffectComponent — vortex + turbulence"
         case .towerStress: return "512 rigid bodies, ECS sleep + wake on contact"
         case .instancing:  return "MeshInstancesComponent — 40 000 instances"
+        case .shooter:     return "a game-shaped load — spawning, physics and audio at once"
         }
     }
 
@@ -63,6 +66,7 @@ enum DemoMode: CaseIterable {
         case .forceField:  return "ForceEffectComponent"
         case .towerStress: return "SleepSystem · scene-wide collision filter"
         case .instancing:  return "MeshInstancesComponent · LowLevelInstanceData"
+        case .shooter:     return "mixed load · continuous spawn + collision"
         }
     }
 }

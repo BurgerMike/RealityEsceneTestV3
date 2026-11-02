@@ -49,6 +49,7 @@ struct LaunchOptions: Sendable {
         case "forcefield", "force":     demoMode = .forceField
         case "stress", "towerstress":   demoMode = .towerStress
         case "instancing", "instances": demoMode = .instancing
+        case "shooter", "range":        demoMode = .shooter
         default:                        demoMode = .balls
         }
 

@@ -43,6 +43,10 @@ struct PhysicsScene: View {
     // Projectiles fired with E, oldest first. Capped so a long recording does
     // not quietly turn into its own stress test.
     @State private var projectiles: [Entity] = []
+    @State private var shooter: ShooterRange?
+    @State private var shooterScore = 0
+    @State private var shooterAccuracy = 0
+    @State private var shooterBodies = 0
     private let maxProjectiles = 24
 
     var body: some View {
@@ -81,6 +85,19 @@ struct PhysicsScene: View {
                     event.entityB.wakePhysicsBody()
                 }
 
+                // The shooting range scores through the same scene-wide
+                // filtered form, for the same reason: one closure for
+                // eighteen targets instead of eighteen the engine has to walk
+                // on every contact anywhere in the scene.
+                _ = content.subscribe(
+                    to: CollisionEvents.Began.self,
+                    componentType: TargetComponent.self
+                ) { event in
+                    let range = ShooterRange.active
+                    if range?.registerHit(on: event.entityA, by: event.entityB) == true { return }
+                    _ = range?.registerHit(on: event.entityB, by: event.entityA)
+                }
+
                 basketballAudio = try? await AudioFileResource(
                     named: "BasketBall.m4a", configuration: .init(shouldLoop: false))
                 boxDropAudio = try? await AudioFileResource(
@@ -110,7 +127,10 @@ struct PhysicsScene: View {
                 )
                 runtime.bindMenuToggle(controller: controller, isMenuOpen: $isMenuOpen)
                 bindCommandKeys()
-                runtime.onFrame = { _ in sampleEngineCounters() }
+                runtime.onFrame = { delta in
+                    shooter?.tick(deltaTime: delta)
+                    sampleEngineCounters()
+                }
             }
             .onDisappear {
                 runtime.stop(controller: controller)
@@ -118,6 +138,8 @@ struct PhysicsScene: View {
                 activeEntities = []
                 projectiles.forEach { $0.removeFromParent() }
                 projectiles = []
+                shooter?.teardown()
+                shooter = nil
             }
 
             PerformanceHUD(
@@ -165,6 +187,11 @@ struct PhysicsScene: View {
             }
         }
 
+        if currentDemoMode == .shooter {
+            rows.append(HUDStat(label: "SCORE", value: "\(shooterScore)", tint: .green))
+            rows.append(HUDStat(label: "ACCURACY", value: "\(shooterAccuracy)%", tint: .cyan))
+            rows.append(HUDStat(label: "IN MOTION", value: "\(shooterBodies)", tint: .yellow))
+        }
         if jointCount > 0 {
             rows.append(HUDStat(label: "JOINTS", value: "\(jointCount)", tint: .cyan))
         }
@@ -187,6 +214,12 @@ struct PhysicsScene: View {
         statsCounter = 0
 
         sleepingCount = SleepSystem.sleepingCount
+
+        if let shooter {
+            shooterScore = shooter.score
+            shooterAccuracy = shooter.accuracy
+            shooterBodies = shooter.activeBodies
+        }
 
         if currentDemoMode == .instancing {
             instanceCount = InstanceFieldSystem.animatedInstances
@@ -213,6 +246,11 @@ struct PhysicsScene: View {
         activeEntities = []
         projectiles.forEach { $0.removeFromParent() }
         projectiles = []
+        shooter?.teardown()
+        shooter = nil
+        shooterScore = 0
+        shooterAccuracy = 0
+        shooterBodies = 0
         bodyCount = 0
         sleepingCount = 0
         instanceCount = 0
@@ -265,6 +303,13 @@ struct PhysicsScene: View {
             activeEntities = result.entities
             instanceCount = result.field.instanceCount
             drawCalls = result.field.bandCount
+
+        case .shooter:
+            let range = setupShooter(in: rig)
+            shooter = range
+            // Deliberately not added to activeEntities: the range keeps
+            // spawning after this point, so it tears itself down.
+            activeEntities = []
         }
 
         installWorldLabel(for: mode, in: rig)
@@ -290,6 +335,8 @@ struct PhysicsScene: View {
             caption = ("\(bodyCount) RIGID BODIES", "ECS sleep + wake on contact")
         case .instancing:
             caption = ("\(instanceCount.formatted()) INSTANCES", "\(drawCalls) draw calls")
+        case .shooter:
+            caption = ("SHOOTING RANGE", "18 targets · clays every 0.35 s · press E")
         }
 
         let label = makeWorldLabel(
@@ -314,6 +361,7 @@ struct PhysicsScene: View {
             in: rig
         )
         projectiles.append(ball)
+        shooter?.countShot()
 
         // Retire the oldest once the cap is reached, so the frame cost of
         // firing stays flat however long the demo runs.
