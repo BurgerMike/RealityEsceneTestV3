@@ -88,6 +88,12 @@ RUNS=(
     "rendering surface     ultra"
 )
 
+# Passes on the outside, rows on the inside. Running a row three times back
+# to back measures it three times at the same temperature, so the median
+# looks tight and the spread says nothing. Spread across the sweep instead,
+# a row is sampled once on a cool chip, once warm and once hot, and its min
+# and max describe what the demo actually does on this machine.
+for (( pass = 1; pass <= REPEATS; pass++ )); do
 for run in "${RUNS[@]}"; do
     set -- $run
     scene=$1; selector=$2; preset=$3
@@ -104,27 +110,29 @@ for run in "${RUNS[@]}"; do
     label="$selector"
     [ "$selector" = "-" ] && label="$scene"
 
-    for (( r = 1; r <= REPEATS; r++ )); do
-        if [ "$REPEATS" -gt 1 ]; then
-            echo "  running $label / $preset  (pass $r of $REPEATS) ..."
-        else
-            echo "  running $label / $preset ..."
-        fi
+    if [ "$REPEATS" -gt 1 ]; then
+        echo "  running $label / $preset  (pass $pass of $REPEATS) ..."
+    else
+        echo "  running $label / $preset ..."
+    fi
 
-        # The reporter keys off this line rather than off the app's own
-        # output. Inferring the configuration from what the app prints
-        # breaks on an invalid run, which prints no preset line at all and
-        # so used to inherit whatever the run before it was using.
-        printf '### %s %s\n' "$label" "$preset" >> "$RAW"
+    # The reporter keys off this line rather than off the app's own
+    # output. Inferring the configuration from what the app prints
+    # breaks on an invalid run, which prints no preset line at all and
+    # so used to inherit whatever the run before it was using.
+    printf '### %s %s\n' "$label" "$preset" >> "$RAW"
 
-        # shellcheck disable=SC2086 — intentional splitting; no value has spaces.
-        "$APP" --scene "$scene" $selector_flag --quality "$preset" \
-               --benchmark "$SECONDS_PER_RUN" >> "$RAW" 2>/dev/null
+    # shellcheck disable=SC2086 — intentional splitting; no value has spaces.
+    "$APP" --scene "$scene" $selector_flag --quality "$preset" \
+           --benchmark "$SECONDS_PER_RUN" >> "$RAW" 2>/dev/null
 
-        # Let the machine settle. Seventeen runs back to back is a sustained
-        # load and the later ones measure a warmer chip than the earlier.
-        sleep 4
-    done
+    # Let the machine settle. Seventeen runs back to back is a sustained
+    # load and the later ones measure a warmer chip than the earlier. Six
+    # seconds rather than four because this is a laptop: the GPU sits
+    # near 90% for the whole of every run, and a gap that lets the fan
+    # catch up costs a couple of minutes and buys a steadier chip.
+    sleep 6
+done
 done
 
 echo
