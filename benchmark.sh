@@ -34,6 +34,32 @@ xcodebuild -project "$PROJECT_DIR/RealityEsceneTestV3.xcodeproj" \
 APP="$BUILD_DIR/RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3"
 [ -x "$APP" ] || { echo "Binary not found at $APP"; exit 1; }
 
+# Name the machine. A frame rate without one is not a result, and the whole
+# point of shipping this script is that someone else can run it and say what
+# their own Mac did.
+echo
+echo "Machine: $(sysctl -n machdep.cpu.brand_string), \
+$(sysctl -n hw.logicalcpu) logical cores, macOS $(sw_vers -productVersion)"
+
+# A benchmark on a busy Mac measures the other thing. This sweep was once run
+# to completion while macOS staged a six gigabyte system update in the
+# background - installd at 84% of a core, UpdateBrainService at 62% - and
+# every demo came out low enough to look like a regression in the project.
+# Nothing in the output said so, which is the part worth fixing.
+BUSY=$(ps -Ao %cpu,comm -r \
+    | awk 'NR > 1 && $1 > 40 { sub(/.*\//, "", $2); print $1 "% " $2 }' \
+    | grep -v RealityEsceneTestV3)
+
+if [ -n "$BUSY" ]; then
+    echo
+    echo "WARNING  something else is using this Mac right now:"
+    echo "$BUSY" | sed 's/^/           /'
+    echo
+    echo "         Numbers measured against a busy machine are not comparable"
+    echo "         with anyone else and should not be quoted. A pending system"
+    echo "         update is the usual culprit: check System Settings first."
+fi
+
 # Kept, not discarded on exit. Every number in the table is derived from
 # this file, and a typo in the awk below once threw away a five-minute sweep
 # that had already finished measuring. Reformatting costs nothing; measuring
