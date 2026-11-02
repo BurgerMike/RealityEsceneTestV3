@@ -47,6 +47,21 @@ final class FrameStats {
     // A run that gathered almost none was not slow; it was not drawing.
     private(set) var recordedFrames = 0
 
+    // Every frame time since the reset, kept only while benchmarking.
+    //
+    // The rolling window above is the right shape for a HUD — it should
+    // answer "how is it going right now" — but it is the wrong shape for a
+    // result. It holds 240 frames, so at 120 fps the figure printed at the
+    // end of a ten-second run described its last two seconds, with the other
+    // eight thrown away. That is what made the fast demos swing: the same
+    // procedural surface measured 47.8, 110.8, 72.8 and 55.3 fps on four
+    // runs, while a demo at 45 fps looked steady only because 240 frames
+    // happened to span most of its run.
+    //
+    // A ten-second benchmark reports ten seconds.
+    var keepsFullHistory = false
+    private var history: [Double] = []
+
     // The display's own ceiling — the demo is pointless without it, since
     // "120 FPS" only means something next to a 120 Hz panel.
     var displayRefreshRate: Int = 60
@@ -74,6 +89,7 @@ final class FrameStats {
 
     func reset() {
         samples.removeAll(keepingCapacity: true)
+        history.removeAll(keepingCapacity: true)
         graph.removeAll(keepingCapacity: true)
         lastTimestamp = 0
         droppedFrames = 0
@@ -95,6 +111,7 @@ final class FrameStats {
         }
 
         samples.append(deltaMS)
+        if keepsFullHistory { history.append(deltaMS) }
         recordedFrames += 1
         if samples.count > capacity { samples.removeFirst(samples.count - capacity) }
         if deltaMS > frameBudgetMS { droppedFrames += 1 }
@@ -102,6 +119,37 @@ final class FrameStats {
         guard timestamp - lastPublish > 0.1 else { return }
         lastPublish = timestamp
         publish(latest: deltaMS)
+    }
+
+    // MARK: Whole-run figures, for the benchmark summary
+
+    // Nil when nothing was recorded, so a caller cannot print a confident
+    // zero for a run that never drew.
+    struct RunSummary {
+        var averageFPS: Double
+        var onePercentLowFPS: Double
+        var p99FrameTimeMS: Double
+        var meanFrameTimeMS: Double
+    }
+
+    func runSummary() -> RunSummary? {
+        guard !history.isEmpty else { return nil }
+
+        let mean = history.reduce(0, +) / Double(history.count)
+
+        let sorted = history.sorted()
+        let p99Index = min(sorted.count - 1, Int(Double(sorted.count) * 0.99))
+
+        let worstCount = max(1, sorted.count / 100)
+        let worst = sorted.suffix(worstCount)
+        let worstMean = worst.reduce(0, +) / Double(worst.count)
+
+        return RunSummary(
+            averageFPS: 1000 / mean,
+            onePercentLowFPS: 1000 / worstMean,
+            p99FrameTimeMS: sorted[p99Index],
+            meanFrameTimeMS: mean
+        )
     }
 
     private func publish(latest: Double) {

@@ -92,6 +92,7 @@ final class SceneRuntime {
         guard duration > 0, benchmarkTask == nil else { return }
 
         pinWindowForBenchmark()
+        frameStats.keepsFullHistory = true
 
         // Polled through the run instead of slept through in one go: the only
         // way to know a measurement can be trusted is to watch the window
@@ -207,10 +208,14 @@ final class SceneRuntime {
         // costs roughly five times what it does in a 1600x1000 window.
         row("surface", benchmarkSurfaceDescription)
         row("display", "\(frameStats.displayRefreshRate) Hz")
-        row("avg", String(format: "%.1f fps", frameStats.averageFPS))
-        row("1% low", String(format: "%.1f fps", frameStats.onePercentLowFPS))
-        row("frame", String(format: "%.2f ms", 1000 / max(frameStats.averageFPS, 0.001)))
-        row("p99", String(format: "%.2f ms", frameStats.p99FrameTimeMS))
+        // Over the whole run, not the HUD's trailing window. frameStats.avg
+        // and friends describe the last 240 frames, which is what a HUD
+        // should show and is not what this is reporting.
+        guard let run = frameStats.runSummary() else { return }
+        row("avg", String(format: "%.1f fps", run.averageFPS))
+        row("1% low", String(format: "%.1f fps", run.onePercentLowFPS))
+        row("frame", String(format: "%.2f ms", run.meanFrameTimeMS))
+        row("p99", String(format: "%.2f ms", run.p99FrameTimeMS))
         row("dropped", "\(frameStats.droppedFrames)")
         row("cpu", String(format: "%.0f%% of machine (%.2f cores)",
                           hardware.cpuUsage, hardware.cpuCores))

@@ -23,8 +23,12 @@ xcodebuild -project "$PROJECT_DIR/RealityEsceneTestV3.xcodeproj" \
 APP="$BUILD_DIR/RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3"
 [ -x "$APP" ] || { echo "Binary not found at $APP"; exit 1; }
 
-RAW=$(mktemp)
-trap 'rm -f "$RAW"' EXIT
+# Kept, not discarded on exit. Every number in the table is derived from
+# this file, and a typo in the awk below once threw away a five-minute sweep
+# that had already finished measuring. Reformatting costs nothing; measuring
+# again costs five minutes of not touching the Mac.
+RAW="$PROJECT_DIR/benchmark-results.txt"
+: > "$RAW"
 
 # scene : selector : preset
 RUNS=(
@@ -78,7 +82,11 @@ printf "%-14s %-13s %8s %9s %9s %7s %6s %6s\n" \
 printf '%.0s-' {1..78}; echo
 
 awk '
-/^ scene/   { mode = $NF }
+# preset is cleared with every new run. An invalid run never prints a preset
+# line, so without this it inherited whatever the run before it was using.
+# No apostrophes in here: this whole program sits inside a single-quoted
+# shell string, and one stray quote ends it and feeds $NF to bash.
+/^ scene/   { mode = $NF; preset = "-" }
 /^ display/ { display = substr($0, 13) }
 /^ preset/  { preset = $2 }
 /^ avg/     { avg = $2 }
@@ -86,11 +94,13 @@ awk '
 /^ p99/     { p99 = $2 }
 /^ dropped/ { dropped = $2 }
 /^ cpu/     { cpu = $2 }
-/^ INVALID/ { printf "%-14s %-13s %s\n", mode, preset, "  INVALID - window was throttled" }
+# The app says which check failed and for how long; pass it straight through
+# rather than restating it as a guess.
+/^ INVALID/ { printf "%-14s %-13s   INVALID - %s\n", mode, preset, substr($0, 13) }
 /^ gpu/     { gpu = $2
               printf "%-14s %-13s %8s %9s %9s %7s %6s %6s\n",
                      mode, preset, avg, low, p99, dropped, cpu, gpu }
 ' "$RAW"
 
 echo
-echo "Full output kept above each table row; rerun with: ./benchmark.sh 20"
+echo "Raw output: $RAW   —   rerun with: ./benchmark.sh 20"
