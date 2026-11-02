@@ -67,9 +67,24 @@ final class ShooterRange {
     private var launchFromLeft = true
 
     private let rig: SceneRig
+
+    // Built once and handed to every body that needs them.
+    //
+    // The first version called Mat.carPaint, Mat.brushedMetal and
+    // generateBox inside the per-target builder, which produced eighteen
+    // distinct box meshes, eighteen cylinder meshes, thirty-six collision
+    // shapes and thirty-six materials for what is really three. RealityKit
+    // batches by mesh and material identity, so every one of those was its
+    // own draw call: the range rendered at 30 fps with the GPU at 93%, next
+    // to 113 for a scene of three spheres.
     private let clayMaterial: PhysicallyBasedMaterial
     private let clayMesh: MeshResource
     private let clayShape: ShapeResource
+    private let targetMesh: MeshResource
+    private let targetShape: ShapeResource
+    private let targetMaterials: [NSColor: PhysicallyBasedMaterial]
+    private let postMesh: MeshResource
+    private let postMaterial: PhysicallyBasedMaterial
 
     var entities: [Entity] { targets + clays }
 
@@ -78,12 +93,26 @@ final class ShooterRange {
     // number is the ones in motion.
     var activeBodies: Int { clays.count + targets.filter(\.isTargetDown).count }
 
+    // One size for every target, so one mesh and one shape serve all of them.
+    private static let targetSize: SIMD3<Float> = [0.9, 0.9, 0.14]
+
     init(rig: SceneRig) {
         self.rig = rig
         clayMesh = .generateSphere(radius: 0.22)
         clayShape = .generateSphere(radius: 0.22)
         clayMaterial = Mat.neon(.systemOrange, intensity: 2.2)
+
+        targetMesh = .generateBox(size: Self.targetSize)
+        targetShape = .generateBox(size: Self.targetSize)
+        targetMaterials = Dictionary(
+            uniqueKeysWithValues: Self.rowTints.map { ($0, Mat.carPaint($0)) }
+        )
+
+        postMesh = .generateCylinder(height: 1.4, radius: 0.06)
+        postMaterial = Mat.brushedMetal()
     }
+
+    private static let rowTints: [NSColor] = [.systemRed, .systemYellow, .systemGreen]
 
     // MARK: Build
 
@@ -91,9 +120,9 @@ final class ShooterRange {
         Self.active = self
 
         let rows: [(z: Float, count: Int, tint: NSColor)] = [
-            (-9.0,  6, .systemRed),
-            (-13.5, 6, .systemYellow),
-            (-18.0, 6, .systemGreen)
+            (-9.0,  6, Self.rowTints[0]),
+            (-13.5, 6, Self.rowTints[1]),
+            (-18.0, 6, Self.rowTints[2])
         ]
 
         for (rowIndex, row) in rows.enumerated() {
@@ -121,27 +150,19 @@ final class ShooterRange {
         points: Int,
         phase: Float
     ) -> ModelEntity {
-        let size: SIMD3<Float> = [0.9, 0.9, 0.14]
-
         let target = ModelEntity(
-            mesh: .generateBox(size: size),
-            materials: [Mat.carPaint(tint)]
+            mesh: targetMesh,
+            materials: [targetMaterials[tint] ?? Mat.carPaint(tint)]
         )
         target.name = "target"
         target.position = position
 
-        target.components.set(CollisionComponent(
-            shapes: [ShapeResource.generateBox(size: size)]
-        ))
+        target.components.set(CollisionComponent(shapes: [targetShape]))
 
         // Static while standing: a target that is not moving should cost the
         // solver nothing, which is the same bargain SleepSystem strikes for
         // the 512-body test.
-        var body = PhysicsBodyComponent(
-            shapes: [ShapeResource.generateBox(size: size)],
-            mass: 3,
-            mode: .static
-        )
+        var body = PhysicsBodyComponent(shapes: [targetShape], mass: 3, mode: .static)
         body.material = PhysicsMaterialResource.generate(
             staticFriction: 0.5, dynamicFriction: 0.4, restitution: 0.1
         )
@@ -155,12 +176,11 @@ final class ShooterRange {
 
         // The post. No collider — it is scenery, and giving it one would add
         // eighteen static shapes the broadphase has to carry for nothing.
-        let post = ModelEntity(
-            mesh: .generateCylinder(height: 1.4, radius: 0.06),
-            materials: [Mat.brushedMetal()]
-        )
+        let post = ModelEntity(mesh: postMesh, materials: [postMaterial])
         post.position = [position.x, position.y - 1.15, position.z]
-        rig.install(post)
+        // No shadow either. Eighteen thin cylinders, each drawn again per
+        // shadow cascade, for something the eye reads as a dark line.
+        rig.install(post, castsShadow: false)
         targets.append(post)
 
         rig.install(target)

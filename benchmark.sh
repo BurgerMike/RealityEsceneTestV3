@@ -96,6 +96,7 @@ RUNS=(
     "physics   stress      balanced"
     "physics   stress      performance"
     "physics   instancing  ultra"
+    "physics   shooter     ultra"
     "particles rain        ultra"
     "particles snow        ultra"
     "particles fire        ultra"
