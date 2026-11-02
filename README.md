@@ -92,6 +92,20 @@ crossing from Swift is nine floats of parameters. Normals come from central
 differences on the height field rather than from averaging face normals, which
 is cheaper and leaves no seams.
 
+### A shooting range, as a benchmark load
+
+Every other demo here measures one kind of work, and a fair objection to all
+of them is that a game is not shaped like that. A game is spawning, physics,
+collisions, audio and rendering competing for the same frame, continuously.
+So this one does all of it at once: eighteen targets that rise and drop,
+clays launched every 0.35 s, scoring through a single scene-wide collision
+subscription, and the full post-processing stack over the top.
+
+It has to produce that load with nobody at the keyboard, because a
+`--benchmark` run has no player. The clays launch themselves and the targets
+stand themselves back up; shooting it only moves the score, and the score is
+the part that does not matter. Press **E** anyway.
+
 Plus: mass and restitution, breakable glass, tower collapse, vortex and
 turbulence force fields, and four particle effects.
 
@@ -106,60 +120,85 @@ macOS 27.2 · **Release build** · rendered into a 3200x2000 px window on a
 Three passes per row, interleaved rather than repeated in place, so each row
 is sampled once on a cool chip, once warm and once hot. **Avg** is the median
 of the three; **min** and **max** are the slowest and fastest pass behind it.
-All 51 passes measured — none was discarded.
+All 54 passes measured — none was discarded.
 
 | Demo | Preset | Avg | Min–Max | 1% low | p99 | Dropped | CPU | GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| Mass & bounce | Ultra | 113.3 | 113.0–118.3 | 39.5 | 24.6 ms | 44 | 6% | 76% |
-| Breakable glass | Ultra | 112.4 | 110.6–117.9 | 37.2 | 20.7 ms | 63 | 6% | 77% |
-| Tower collapse | Ultra | 104.2 | 102.6–110.0 | 38.4 | 25.1 ms | 114 | 6% | 86% |
-| Chains, 20 joints | Ultra | 43.0 | 41.9–46.0 | 28.3 | 30.7 ms | 399 | 5% | 85% |
-| Force fields, 150 bodies | Ultra | 71.4 | 61.3–84.2 | 32.5 | 28.1 ms | 352 | 7% | 85% |
-| **512 rigid bodies** | Ultra | **48.7** | 43.1–53.1 | 29.0 | 32.8 ms | 415 | 8% | 71% |
-| 512 rigid bodies | Balanced | 49.9 | 49.9–55.8 | 28.5 | 33.2 ms | 413 | 8% | 71% |
-| 512 rigid bodies | Performance | 75.4 | 70.4–81.3 | 34.4 | 27.5 ms | 312 | 9% | 70% |
-| **40 000 instances** | Ultra | **41.2** | 38.6–45.4 | 22.8 | 42.1 ms | 395 | 5% | **96%** |
-| Rain | Ultra | 113.2 | 110.5–113.2 | 39.3 | 24.9 ms | 54 | 6% | 78% |
-| Snow | Ultra | 110.2 | 109.0–113.1 | 39.3 | 25.1 ms | 76 | 6% | 81% |
-| Fire | Ultra | 48.8 | 47.4–56.9 | 29.3 | 28.8 ms | 414 | 6% | 83% |
-| Sparks | Ultra | 68.0 | 59.7–92.4 | 32.0 | 28.5 ms | 422 | 8% | 74% |
-| Spatial audio | Ultra | 89.8 | 89.2–90.5 | 35.4 | 27.2 ms | 239 | 6% | 83% |
-| Portals, 3 worlds | Ultra | 111.3 | 110.6–117.2 | 39.4 | 25.0 ms | 62 | 6% | 76% |
-| Material lab | Ultra | 113.7 | 112.3–114.3 | 39.7 | 24.5 ms | 50 | 6% | 77% |
-| Procedural surface | Ultra | 108.4 | 106.5–115.9 | 39.3 | 25.0 ms | 90 | 6% | 82% |
+| Material lab | Ultra | 119.4 | 94.9–119.9 | 80.0 | 8.3 ms | 6 | 3% | 77% |
+| Rain | Ultra | 119.3 | 80.7–119.4 | 74.9 | 8.3 ms | 7 | 4% | 72% |
+| Portals, 3 worlds | Ultra | 118.7 | 78.9–119.4 | 57.6 | 8.3 ms | 11 | 5% | 75% |
+| Mass & bounce | Ultra | 114.6 | 88.7–119.1 | 39.6 | 24.6 ms | 36 | 6% | 72% |
+| Breakable glass | Ultra | 109.6 | 67.8–117.9 | 36.6 | 25.2 ms | 62 | 6% | 75% |
+| Snow | Ultra | 103.6 | 87.6–119.6 | 39.4 | 25.2 ms | 99 | 6% | 74% |
+| Procedural surface | Ultra | 92.7 | 68.6–94.1 | 38.0 | 26.1 ms | 164 | 6% | 81% |
+| **Shooting range** | Ultra | **92.0** | 83.1–112.1 | 39.1 | 25.4 ms | 174 | 6% | 77% |
+| Spatial audio | Ultra | 72.8 | 63.5–85.1 | 35.6 | 26.2 ms | 304 | 6% | 80% |
+| Tower collapse | Ultra | 62.3 | 49.5–105.2 | 38.5 | 25.7 ms | 325 | 5% | 79% |
+| Sparks | Ultra | 47.4 | 42.5–48.0 | 35.8 | 25.8 ms | 397 | 7% | 65% |
+| 512 rigid bodies | Performance | 44.6 | 43.0–46.9 | 38.5 | 25.7 ms | 389 | 7% | 64% |
+| Fire | Ultra | 42.5 | 41.7–44.4 | 37.9 | 25.7 ms | 414 | 5% | 78% |
+| Force fields, 150 bodies | Ultra | 41.7 | 41.2–42.2 | 29.9 | 25.8 ms | 398 | 6% | 68% |
+| **40 000 instances** | Ultra | **40.7** | 39.6–45.5 | 26.1 | 28.4 ms | 399 | 5% | **95%** |
+| 512 rigid bodies | Balanced | 40.6 | 40.1–40.9 | 30.8 | 27.7 ms | 397 | 7% | 63% |
+| Chains, 20 joints | Ultra | 40.1 | 40.0–40.3 | 30.6 | 25.9 ms | 403 | 5% | 79% |
+| **512 rigid bodies** | Ultra | **40.0** | 39.9–40.9 | 29.6 | 32.8 ms | 393 | 7% | 64% |
 
-Eight of the seventeen hold above 100 fps on a 120 Hz panel with MSAA 4x, HDR,
-bloom, motion blur and depth of field all on. The ones that do not are the
-ones built to saturate something.
+### Why so many rows sit at 40
+
+Look at the bottom of the table: 40.0, 40.1, 40.6, 40.7, 41.7, 42.5. Six
+demos doing completely different work, landing within two frames a second of
+each other. That is not six coincidences, it is vsync.
+
+With vsync on, a frame is presented on a refresh boundary or it waits for the
+next one. On a 120 Hz panel the only frame times available are 8.33 ms,
+16.67 ms, 25.0 ms, 33.3 ms — so the only frame rates available are **120, 60,
+40 and 30**. A demo that cannot finish a frame in 16.67 ms does not degrade
+to 55; it falls to the next step down and sits there. The p99 column shows it
+directly: every row in that cluster reports about 25.8 ms, which is three
+refresh intervals, and every row at the top reports exactly 8.33 ms, which is
+one.
+
+It also explains why a row moves between sweeps. Force fields measured 71.4
+on an earlier sweep and 41.7 here, and the tower ranges 49.5–105.2 across its
+own three passes. Those demos sit near the 16.67 ms boundary, so a small
+change in load pushes them from the 60 step to the 40 step and the average
+halves. The ones with tight spreads — chains at 40.0–40.3, force fields at
+41.2–42.2 — are the ones sitting *well* past the boundary, where there is
+nothing to be bistable about.
+
+Read the table as steps, then: six demos hold the panel's full 120, and the
+rest sit on the 60 or 40 step.
+
+### Reading the other columns
 
 **The CPU column is the whole machine**, all eight cores, which is why it
-reads 5–9% and not the 50–80% an earlier version of this table claimed. That
+reads 3–7% and not the 50–80% an earlier version of this table claimed. That
 older number came from summing per-thread utilisation, where each thread is a
 fraction of *one* core; adding those up and calling it a percentage of the
-Mac overstated it by roughly eight times. 8% of this machine is about two
-thirds of a single core.
+Mac overstated it by roughly eight times. 7% of this machine is about half a
+single core.
 
-That matters for reading the physics rows. **512 rigid bodies runs at 48.7
-with the GPU at 71% and the machine 92% idle**, so neither column is the
-wall. RealityKit steps the solver on one thread, and two thirds of one core
-is what that thread costs; the frame cannot present until it finishes, no
-matter how many cores are sitting free beside it. The benchmark measures the
-process, not individual threads, so take that as the reading it is rather
-than a measurement.
+That matters for reading the physics rows. **512 rigid bodies runs at 40.0
+with the GPU at 64% and the machine 93% idle**, so neither column is the
+wall. RealityKit steps the solver on one thread, and half a core is what that
+thread costs; the frame cannot present until it finishes, no matter how many
+cores sit free beside it. The benchmark measures the process, not individual
+threads, so take that as the reading it is rather than a measurement.
 
-**40 000 instances is the one unambiguous case: GPU-bound at 96%.** Cutting
+**40 000 instances is the one unambiguous case: GPU-bound at 95%.** Cutting
 the count barely helps — 10 000 cubes only reached 73 fps in isolation. The
 cost is fill rate and sub-pixel triangles across half the screen, not the
 instancing itself. Six draw calls for 40 000 objects is doing its job; the
 rasteriser is the wall.
 
-The wide rows are honest noise. Sparks ranges 59.7–92.4 and force fields
-61.3–84.2 because both are chaotic: where the bodies land and how many
-emitters overlap changes from pass to pass. The tight rows — spatial audio at
-89.2–90.5, material lab at 112.3–114.3 — are the ones doing the same work
-every frame. A row whose min and max sit far apart is telling you something,
-which is the entire reason the spread is printed next to the median instead
-of being averaged away.
+**The shooting range is the row that answers "but a game is different".**
+Every other demo measures one kind of work. The range runs continuous
+spawning, rigid-body physics, collision scoring, spatial audio and the full
+post-processing stack at the same time, which is the mixture an actual game
+puts in a frame — and it holds 92 fps. It also produces that load with nobody
+at the keyboard, because a benchmark run has no player: the clays launch
+themselves and the targets stand themselves back up. Shooting it only moves
+the score.
 
 ### Measuring this honestly took more work than the demos
 
@@ -262,7 +301,7 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 | Flag | Values |
 |---|---|
 | `--scene` | `physics` · `particles` · `audio` · `rendering` |
-| `--mode` | `balls` · `breakable` · `tower` · `joints` · `forcefield` · `stress` · `instancing` |
+| `--mode` | `balls` · `breakable` · `tower` · `joints` · `forcefield` · `stress` · `instancing` · `shooter` |
 | `--effect` | `rain` · `snow` · `fire` · `sparks` |
 | `--showcase` | `portals` · `materials` · `surface` |
 | `--channel` | `basecolor` · `normal` · `roughness` · `metallic` · `clearcoat` · `ao` · `diffuse` · `specular` |
