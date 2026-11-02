@@ -44,6 +44,12 @@ APP="$BUILD_DIR/RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3"
 # partway through and discards everything after it. The first full run of
 # this script lost at least one pass on all seventeen rows that way, and the
 # last four rows lost two of three.
+# -u wakes it first. -di only stops a display going to sleep; it will not
+# wake one that is already asleep, and a sweep started against a dark screen
+# measures nothing at all. Two full passes - seventeen rows each, ten
+# minutes of this machine - were lost that way before the third woke up and
+# measured cleanly, which is a thing no result should ever depend on.
+caffeinate -u -t 2
 caffeinate -di -w $$ &
 
 # Name the machine. A frame rate without one is not a result, and the whole
