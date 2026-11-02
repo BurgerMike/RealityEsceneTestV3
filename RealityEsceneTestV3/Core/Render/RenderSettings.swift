@@ -172,9 +172,20 @@ extension RenderSettings {
         }
 
         if toneMapping {
+            // RealityKit allows one ToneMappingComponent per scene. A previous
+            // scene's rig can outlive its view for a moment while scenes
+            // switch, so hand the component over instead of duplicating it.
+            if let previous = Self.toneMappingOwner, previous !== postFX {
+                previous.components.remove(ToneMappingComponent.self)
+            }
             postFX.components.set(ToneMappingComponent(exposure: exposure))
+            Self.toneMappingOwner = postFX
         } else {
             postFX.components.remove(ToneMappingComponent.self)
+            if Self.toneMappingOwner === postFX { Self.toneMappingOwner = nil }
         }
     }
+
+    // The entity that currently carries the scene's single ToneMappingComponent.
+    @MainActor private static weak var toneMappingOwner: Entity?
 }

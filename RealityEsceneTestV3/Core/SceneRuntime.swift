@@ -93,10 +93,22 @@ final class SceneRuntime {
 
         pinWindowForBenchmark()
 
+        // Polled through the run instead of slept through in one go: the only
+        // way to know a measurement can be trusted is to watch the window
+        // while it is being taken.
         benchmarkTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(duration))
-            guard let self, !Task.isCancelled else { return }
-            self.printBenchmark(duration: duration)
+            let watch = BenchmarkWindowWatch()
+            var remaining = duration
+
+            while remaining > 0 {
+                try? await Task.sleep(for: .seconds(BenchmarkWindowWatch.intervalSeconds))
+                guard !Task.isCancelled else { return }
+                remaining -= BenchmarkWindowWatch.intervalSeconds
+                watch.sample()
+            }
+
+            guard let self else { return }
+            self.printBenchmark(duration: duration, watch: watch)
             NSApplication.shared.terminate(nil)
         }
     }
@@ -115,11 +127,21 @@ final class SceneRuntime {
         window.setContentSize(NSSize(width: 1600, height: 1000))
         window.center()
 
-        // And brought to the front. macOS throttles an occluded window hard —
-        // resizing one into the space behind another dropped a scene that
-        // runs at 120 to under 4 fps, with the GPU at a third. A benchmark
-        // that measures the compositor's power saving is worth nothing.
-        window.makeKeyAndOrderFront(nil)
+        bringWindowToFront()
+    }
+
+    // macOS throttles an occluded window hard — resizing one into the space
+    // behind another dropped a scene that runs at 120 to under 4 fps, with
+    // the GPU at a third. A benchmark that measures the compositor's power
+    // saving is worth nothing.
+    //
+    // Asked for once, at the start, and never again. Re-asserting the front
+    // every tenth of a second was tried: against a window the person is
+    // actually using it does not win, and all it achieves is yanking focus
+    // out from under them. A run that cannot have the screen should say so
+    // and be run again later, not fight for it.
+    private func bringWindowToFront() {
+        NSApplication.shared.windows.first?.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
     }
 
@@ -133,7 +155,7 @@ final class SceneRuntime {
         return "\(Int(size.width * scale))x\(Int(size.height * scale)) px"
     }
 
-    private func printBenchmark(duration: Double) {
+    private func printBenchmark(duration: Double, watch: BenchmarkWindowWatch) {
         let options = LaunchOptions.current
 
         // Name what actually ran: --mode only means anything in the physics
@@ -158,14 +180,17 @@ final class SceneRuntime {
         // compositor's power saving, not this machine. Saying so is the only
         // honest option: a confident "0.0 fps" in a results table is worse
         // than no row at all.
-        let expected = Double(frameStats.displayRefreshRate) * duration * 0.25
-        guard Double(frameStats.recordedFrames) >= expected else {
+        //
+        // What it must not do is call a slow demo invalid. The verdict comes
+        // from what the window was observed doing during the run, not from
+        // how few frames came out of it.
+        if let reason = watch.invalidReason(recordedFrames: frameStats.recordedFrames,
+                                            duration: duration) {
             print("")
             print("-- BENCHMARK ----------------------------------")
             row("scene", scene)
-            row("INVALID", "presented \(frameStats.recordedFrames) frames in \(Int(duration))s")
+            row("INVALID", reason)
             print("")
-            print(" The window was not frontmost, so macOS throttled it.")
             print(" Run the sweep without using the Mac for anything else.")
             print("-----------------------------------------------")
             print("")
