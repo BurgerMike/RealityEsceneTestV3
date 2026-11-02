@@ -100,45 +100,94 @@ turbulence force fields, and four particle effects.
 ## Performance
 
 MacBook Pro · Apple M3 · 8-core CPU (4P + 4E) · 10-core GPU · 24 GB unified ·
-120 Hz display · macOS 27 · **Release build** · one back-to-back sweep of
-`./benchmark.sh 10`.
+macOS 27.2 · **Release build** · rendered into a 3200x2000 px window on a
+120 Hz panel · `./benchmark.sh 10 3`.
 
-| Demo | Preset | Avg | 1% low | p99 | CPU | GPU |
-|---|---|---:|---:|---:|---:|---:|
-| Mass & bounce | Ultra | 112.1 | 32.7 | 19.6 ms | 49% | 72% |
-| Breakable glass | Ultra | 108.3 | 23.2 | 23.0 ms | 49% | 76% |
-| Tower collapse | Ultra | 112.5 | 42.0 | 19.6 ms | 51% | 73% |
-| Chains, 20 joints | Ultra | 109.5 | 36.2 | 27.6 ms | 59% | 77% |
-| Force fields, 150 bodies | Ultra | 106.4 | 35.7 | 25.7 ms | 58% | 70% |
-| **512 rigid bodies** | Ultra | **54.1** | 29.6 | 33.5 ms | **76%** | 68% |
-| 512 rigid bodies | Balanced | 84.5 | 29.7 | 28.0 ms | 79% | 63% |
-| 512 rigid bodies | Performance | 74.2 | 29.6 | 33.4 ms | 71% | 67% |
-| **40 000 instances** | Ultra | **29.9** | 15.2 | 61.9 ms | 37% | **96%** |
-| Rain | Ultra | 112.9 | 37.6 | 21.5 ms | 51% | 74% |
-| Snow | Ultra | 115.2 | 51.6 | 19.1 ms | 53% | 76% |
-| Fire | Ultra | 119.0 | 60.0 | 8.3 ms | 49% | 77% |
-| Sparks | Ultra | 119.0 | 60.0 | 8.3 ms | 74% | 70% |
-| Spatial audio | Ultra | 104.0 | 28.6 | 27.5 ms | 65% | 70% |
+Three passes per row, interleaved rather than repeated in place, so each row
+is sampled once on a cool chip, once warm and once hot. **Avg** is the median
+of the three; **min** and **max** are the slowest and fastest pass behind it.
+All 51 passes measured — none was discarded.
 
-Eleven of the fourteen hold above 100 fps on a 120 Hz panel with MSAA 4x, HDR,
-bloom, motion blur and depth of field all on. The three that do not are the
-ones built to saturate something, and the CPU and GPU columns say which:
+| Demo | Preset | Avg | Min–Max | 1% low | p99 | Dropped | CPU | GPU |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Mass & bounce | Ultra | 113.3 | 113.0–118.3 | 39.5 | 24.6 ms | 44 | 6% | 76% |
+| Breakable glass | Ultra | 112.4 | 110.6–117.9 | 37.2 | 20.7 ms | 63 | 6% | 77% |
+| Tower collapse | Ultra | 104.2 | 102.6–110.0 | 38.4 | 25.1 ms | 114 | 6% | 86% |
+| Chains, 20 joints | Ultra | 43.0 | 41.9–46.0 | 28.3 | 30.7 ms | 399 | 5% | 85% |
+| Force fields, 150 bodies | Ultra | 71.4 | 61.3–84.2 | 32.5 | 28.1 ms | 352 | 7% | 85% |
+| **512 rigid bodies** | Ultra | **48.7** | 43.1–53.1 | 29.0 | 32.8 ms | 415 | 8% | 71% |
+| 512 rigid bodies | Balanced | 49.9 | 49.9–55.8 | 28.5 | 33.2 ms | 413 | 8% | 71% |
+| 512 rigid bodies | Performance | 75.4 | 70.4–81.3 | 34.4 | 27.5 ms | 312 | 9% | 70% |
+| **40 000 instances** | Ultra | **41.2** | 38.6–45.4 | 22.8 | 42.1 ms | 395 | 5% | **96%** |
+| Rain | Ultra | 113.2 | 110.5–113.2 | 39.3 | 24.9 ms | 54 | 6% | 78% |
+| Snow | Ultra | 110.2 | 109.0–113.1 | 39.3 | 25.1 ms | 76 | 6% | 81% |
+| Fire | Ultra | 48.8 | 47.4–56.9 | 29.3 | 28.8 ms | 414 | 6% | 83% |
+| Sparks | Ultra | 68.0 | 59.7–92.4 | 32.0 | 28.5 ms | 422 | 8% | 74% |
+| Spatial audio | Ultra | 89.8 | 89.2–90.5 | 35.4 | 27.2 ms | 239 | 6% | 83% |
+| Portals, 3 worlds | Ultra | 111.3 | 110.6–117.2 | 39.4 | 25.0 ms | 62 | 6% | 76% |
+| Material lab | Ultra | 113.7 | 112.3–114.3 | 39.7 | 24.5 ms | 50 | 6% | 77% |
+| Procedural surface | Ultra | 108.4 | 106.5–115.9 | 39.3 | 25.0 ms | 90 | 6% | 82% |
 
-- **512 rigid bodies is CPU-bound.** The solver and the per-body work are the
-  cost; the GPU sits at 68%. Dropping the shadow distance (the Balanced
-  preset) buys more than dropping the post-processing does.
-- **40 000 instances is GPU-bound at 96%**, and reducing the count barely
-  helps — 10 000 cubes only reached 73 fps in isolation. The cost is fill
-  rate and sub-pixel triangles across half the screen, not the instancing.
-  Six draw calls for 40 000 objects is doing its job; the rasteriser is the
-  wall.
+Eight of the seventeen hold above 100 fps on a 120 Hz panel with MSAA 4x, HDR,
+bloom, motion blur and depth of field all on. The ones that do not are the
+ones built to saturate something.
 
-Two honest caveats. These are back-to-back runs, so the later ones measure a
-warmer chip — the same instancing scene measures around 52 fps on a cool
-machine. And the physics demos are chaotic: where the ball lands changes the
-result, so the 512-body test has ranged from 54 to 120 fps across runs. That
-is exactly why the benchmark ships with the app instead of being a number in
-a README.
+**The CPU column is the whole machine**, all eight cores, which is why it
+reads 5–9% and not the 50–80% an earlier version of this table claimed. That
+older number came from summing per-thread utilisation, where each thread is a
+fraction of *one* core; adding those up and calling it a percentage of the
+Mac overstated it by roughly eight times. 8% of this machine is about two
+thirds of a single core.
+
+That matters for reading the physics rows. **512 rigid bodies runs at 48.7
+with the GPU at 71% and the machine 92% idle**, so neither column is the
+wall. RealityKit steps the solver on one thread, and two thirds of one core
+is what that thread costs; the frame cannot present until it finishes, no
+matter how many cores are sitting free beside it. The benchmark measures the
+process, not individual threads, so take that as the reading it is rather
+than a measurement.
+
+**40 000 instances is the one unambiguous case: GPU-bound at 96%.** Cutting
+the count barely helps — 10 000 cubes only reached 73 fps in isolation. The
+cost is fill rate and sub-pixel triangles across half the screen, not the
+instancing itself. Six draw calls for 40 000 objects is doing its job; the
+rasteriser is the wall.
+
+The wide rows are honest noise. Sparks ranges 59.7–92.4 and force fields
+61.3–84.2 because both are chaotic: where the bodies land and how many
+emitters overlap changes from pass to pass. The tight rows — spatial audio at
+89.2–90.5, material lab at 112.3–114.3 — are the ones doing the same work
+every frame. A row whose min and max sit far apart is telling you something,
+which is the entire reason the spread is printed next to the median instead
+of being averaged away.
+
+### Measuring this honestly took more work than the demos
+
+Every number above is the output of `benchmark.sh`, and getting that script
+to tell the truth took four corrections, each of which had already produced
+plausible-looking results that were wrong:
+
+- **It averaged its last 240 frames, not the run.** That window is the right
+  shape for a HUD and the wrong shape for a result: at 120 fps it is two
+  seconds of a ten-second run. The procedural surface measured 47.8, 110.8,
+  72.8 and 55.3 fps on four runs of the same scene before this was fixed, and
+  66.0–72.0 after.
+- **It called a slow demo a throttled one.** An invalid run was detected by
+  counting frames — fewer than a quarter of the display's meant trouble —
+  which cannot tell a throttled window from a demo honestly running at 22 fps.
+  It now asks AppKit whether the window was occluded or the app was in the
+  background, and says which, and for how long.
+- **It measured a sleeping screen.** macOS reports every window as not
+  visible once the display sleeps. A sweep takes a quarter of an hour and
+  asks to be left alone, so the screen goes dark partway through and
+  everything after it is throttled. Two full passes were lost to this before
+  the script learned to wake the display and hold it awake.
+- **It did not say when the machine was busy.** An entire sweep was run while
+  macOS staged a six gigabyte system update in the background, with `installd`
+  at 84% of a core. Every demo came out low enough to look like a regression
+  in this project, and nothing in the output said why. The script now names
+  the machine it measured and warns, before the first run, about anything
+  else using it.
 
 ### What changed
 
@@ -151,6 +200,14 @@ to 114 in isolation, and none of them were about the hardware:
 | plain boxes instead of `generateBox(cornerRadius:)` | 69.4 |
 | 6 solver iterations, no redundant component writes | 92.2 |
 | collision wake handled inline instead of a `Task` per contact | 114.3 |
+
+These four, and the clearcoat figure below, were all measured before the
+benchmark was fixed to average the whole run instead of its last two
+seconds, so they read high and do not line up with the 48.7 in the table
+above. They were taken the same way as each other, which is what makes the
+progression meaningful; they are not comparable with anything measured
+since. Re-running them is not possible — each belongs to a state of the
+code that no longer exists.
 
 Clearcoat is the same kind of trap. On the procedural surface, which covers
 most of the lower screen, a `clearcoat` of 0.6 cost **48 fps against 118** —
@@ -182,11 +239,20 @@ runs roughly a third of the speed and its frame graph is not representative.
 ### Benchmark it yourself
 
 ```bash
-./benchmark.sh 10
+./benchmark.sh 10 3
 ```
 
-Builds Release, runs every demo, prints a table. Each run measures itself and
-quits — no interaction. Individual runs:
+Ten seconds per run, three passes per row. Builds Release, names the machine
+it is about to measure, warns if anything else is using it, wakes the display
+and holds it awake, runs every demo, prints a table. No interaction.
+
+Leave the Mac alone while it runs — it takes about a quarter of an hour at
+those settings, and a row measured while you were doing something else is a
+row about something else. The script tells you when that happened rather than
+quietly printing the number.
+
+With one pass (`./benchmark.sh 10`) the min and max columns are dropped.
+Individual runs:
 
 ```bash
 RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
