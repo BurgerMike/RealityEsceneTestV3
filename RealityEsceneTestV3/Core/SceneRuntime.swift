@@ -97,8 +97,13 @@ final class SceneRuntime {
         // Polled through the run instead of slept through in one go: the only
         // way to know a measurement can be trusted is to watch the window
         // while it is being taken.
+        // Captured on its own so the loop can read the load without touching
+        // the weak self it deliberately does not hold.
+        let hardware = self.hardware
+
         benchmarkTask = Task { @MainActor [weak self] in
             let watch = BenchmarkWindowWatch()
+            var load = BenchmarkLoadTrace()
             var remaining = duration
 
             while remaining > 0 {
@@ -106,10 +111,13 @@ final class SceneRuntime {
                 guard !Task.isCancelled else { return }
                 remaining -= BenchmarkWindowWatch.intervalSeconds
                 watch.sample()
+                load.sample(cpuPercent: hardware.cpuUsage,
+                            cpuCores: hardware.cpuCores,
+                            gpuPercent: hardware.gpuUtilization)
             }
 
             guard let self else { return }
-            self.printBenchmark(duration: duration, watch: watch)
+            self.printBenchmark(duration: duration, watch: watch, load: load)
             NSApplication.shared.terminate(nil)
         }
     }
@@ -123,9 +131,39 @@ final class SceneRuntime {
     //
     // Benchmark runs are therefore pinned to a fixed size, so a number from
     // one run means the same thing as a number from the next.
+    //
+    // Pinned in PIXELS, not points. Setting a 1600x1000 point window looks
+    // reproducible and is not: the same panel in its HiDPI mode gives that
+    // window 6.4 megapixels and at 1:1 native gives it 1.6, and this stress
+    // test came out at 49 fps under the first and 105 under the second with
+    // nothing changed but a Display setting. Points describe the desk; pixels
+    // are what the GPU fills.
+    // 3200x2000, which is what a 1600x1000 point window came to on the Retina
+    // panel every published row was measured on.
+    private static let benchmarkSurfacePixels = CGSize(width: 3200, height: 2000)
+
     private func pinWindowForBenchmark() {
         guard let window = NSApplication.shared.windows.first else { return }
-        window.setContentSize(NSSize(width: 1600, height: 1000))
+
+        let scale = max(window.backingScaleFactor, 1)
+        var points = CGSize(width: Self.benchmarkSurfacePixels.width / scale,
+                            height: Self.benchmarkSurfacePixels.height / scale)
+
+        // A 1x display cannot always hold the target: 3200x2000 points does
+        // not fit on this laptop's own 3024x1964 panel. Take the largest that
+        // does, keeping the shape, and leave it to the summary to report the
+        // surface actually measured — which it reads back off the window
+        // rather than assuming it got what it asked for.
+        if let room = window.screen?.visibleFrame.size {
+            let margin: CGFloat = 40      // title bar and a little slack
+            let fit = min((room.width - margin) / points.width,
+                          (room.height - margin) / points.height,
+                          1)
+            points = CGSize(width: (points.width * fit).rounded(.down),
+                            height: (points.height * fit).rounded(.down))
+        }
+
+        window.setContentSize(points)
         window.center()
 
         bringWindowToFront()
@@ -153,10 +191,16 @@ final class SceneRuntime {
         guard let window = NSApplication.shared.windows.first else { return "unknown" }
         let scale = window.backingScaleFactor
         let size = window.contentView?.bounds.size ?? window.frame.size
-        return "\(Int(size.width * scale))x\(Int(size.height * scale)) px"
+        // The scale is part of the result, not trivia: it is the difference
+        // between a row that can be compared with the published table and one
+        // that cannot.
+        return String(format: "%dx%d px (%.1fx)",
+                      Int(size.width * scale), Int(size.height * scale), scale)
     }
 
-    private func printBenchmark(duration: Double, watch: BenchmarkWindowWatch) {
+    private func printBenchmark(duration: Double,
+                                watch: BenchmarkWindowWatch,
+                                load: BenchmarkLoadTrace) {
         let options = LaunchOptions.current
 
         // Name what actually ran: --mode only means anything in the physics
@@ -202,7 +246,9 @@ final class SceneRuntime {
         print("")
         print("-- BENCHMARK ----------------------------------")
         row("scene", scene)
-        row("preset", options.quality.label)
+        // The resolved label, not the flag: --quality auto has to report what
+        // it actually ran as.
+        row("preset", RenderSettings.activeLabel)
         // Without the resolution these numbers cannot be reproduced or even
         // compared: the renderer is fill-rate bound, so the same scene at 4K
         // costs roughly five times what it does in a 1600x1000 window.
@@ -217,9 +263,14 @@ final class SceneRuntime {
         row("frame", String(format: "%.2f ms", run.meanFrameTimeMS))
         row("p99", String(format: "%.2f ms", run.p99FrameTimeMS))
         row("dropped", "\(frameStats.droppedFrames)")
-        row("cpu", String(format: "%.0f%% of machine (%.2f cores)",
-                          hardware.cpuUsage, hardware.cpuCores))
-        row("gpu", String(format: "%.0f%%", hardware.gpuUtilization))
+        // Peak first on purpose. The reporter in benchmark.sh reads the second
+        // field of these lines, so putting the peak there makes the table's CPU
+        // and GPU columns the worst moment of the run instead of whatever the
+        // run happened to end on.
+        row("cpu", String(format: "%.0f%% peak, %.0f%% mean of machine (%.2f cores peak)",
+                          load.cpuPeak, load.cpuMean, load.cpuPeakCores))
+        row("gpu", String(format: "%.0f%% peak, %.0f%% mean",
+                          load.gpuPeak, load.gpuMean))
         row("alloc", "\(hardware.allocatedBytes / 1_048_576) MB")
         print("-----------------------------------------------")
         print("")

@@ -93,7 +93,7 @@ struct MenuOverlay: View {
 
                     HStack(spacing: 8) {
                         ForEach(QualityPreset.allCases, id: \.self) { preset in
-                            let selected = renderSettings.preset == preset
+                            let selected = renderSettings.selection == preset
                             Button {
                                 renderSettings = RenderSettings(preset: preset)
                             } label: {

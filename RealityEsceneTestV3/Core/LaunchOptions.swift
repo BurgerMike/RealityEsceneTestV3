@@ -71,6 +71,7 @@ struct LaunchOptions: Sendable {
         }
 
         switch value("--quality") {
+        case "auto":        quality = .auto
         case "performance": quality = .performance
         case "balanced":    quality = .balanced
         default:            quality = .ultra

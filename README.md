@@ -203,7 +203,7 @@ the score.
 ### Measuring this honestly took more work than the demos
 
 Every number above is the output of `benchmark.sh`, and getting that script
-to tell the truth took four corrections, each of which had already produced
+to tell the truth took six corrections, each of which had already produced
 plausible-looking results that were wrong:
 
 - **It averaged its last 240 frames, not the run.** That window is the right
@@ -221,6 +221,21 @@ plausible-looking results that were wrong:
   asks to be left alone, so the screen goes dark partway through and
   everything after it is throttled. Two full passes were lost to this before
   the script learned to wake the display and hold it awake.
+- **It read the CPU and GPU once, at the moment the run ended.** For a demo
+  that settles, that is the least informative instant it has: by the end of
+  the stress test the ball has stopped, `SleepSystem` has parked all 512
+  bodies and the solver is doing nothing, so the summary printed 8% of the
+  machine under a run whose load had peaked at 89%. Both readings were true;
+  only one of them described the demo. Those columns are now the peak across
+  the whole run, with the mean printed beside it.
+- **It pinned the window in points, not pixels.** Pinning the window at all
+  is the right instinct — every scene here is fill-rate bound — but a
+  1600x1000 *point* window is 6.4 megapixels on a Retina panel in its HiDPI
+  mode and 1.6 on the same panel at 1:1 native. The stress test came out at
+  49 fps under one Display setting and 105 under the other, on the same
+  machine, on the same afternoon, with nothing else changed. The target is
+  now a pixel count, clamped to what the screen can actually hold, and the
+  summary reports both the surface it got and the scale it was measured at.
 - **It did not say when the machine was busy.** An entire sweep was run while
   macOS staged a six gigabyte system update in the background, with `installd`
   at 84% of a core. Every demo came out low enough to look like a regression
@@ -305,8 +320,16 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 | `--effect` | `rain` · `snow` · `fire` · `sparks` |
 | `--showcase` | `portals` · `materials` · `surface` |
 | `--channel` | `basecolor` · `normal` · `roughness` · `metallic` · `clearcoat` · `ao` · `diffuse` · `specular` |
-| `--quality` | `performance` · `balanced` · `ultra` |
+| `--quality` | `auto` · `performance` · `balanced` · `ultra` |
 | `--benchmark` | seconds to measure, then print and quit |
+
+`--quality auto` picks one of the three presets from the window's pixel count,
+and picks again if the window is resized or dragged onto a display with a
+different scale: ULTRA up to 9 megapixels, BALANCED to 16, PERFORMANCE above
+that. It resolves to a named preset instead of scaling continuously, and the
+summary prints which one it chose — `--quality ultra` has to mean the same
+thing on every machine or none of the rows above can be compared with each
+other. The three fixed presets never adapt to anything.
 
 ### Controls
 

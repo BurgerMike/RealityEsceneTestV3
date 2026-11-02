@@ -303,6 +303,9 @@ func setupTower(
     let boxSize: Float = 0.6
     let boxMesh = MeshResource.generateBox(size: boxSize, cornerRadius: 0.02)
     let boxShape = ShapeResource.generateBox(size: [boxSize, boxSize, boxSize])
+    let boxContact = PhysicsMaterialResource.generate(
+        staticFriction: 0.8, dynamicFriction: 0.6, restitution: 0.1
+    )
 
     for (towerIndex, tower) in towerPositions.enumerated() {
         for row in 0..<6 {
@@ -325,11 +328,7 @@ func setupTower(
             box.components.set(CollisionComponent(shapes: [boxShape]))
 
             var physics = PhysicsBodyComponent(shapes: [boxShape], mass: 1.0, mode: .dynamic)
-            physics.material = PhysicsMaterialResource.generate(
-                staticFriction:  0.8,
-                dynamicFriction: 0.6,
-                restitution:     0.1
-            )
+            physics.material = boxContact
             box.components.set(physics)
             box.components.set(SleepComponent())
 
@@ -454,6 +453,10 @@ func setupForceField(
     // Shared palette — same reason as the stress test: a material per body is
     // a pipeline switch per body.
     let palette = (0..<8).map { Mat.hueCube(CGFloat($0) / 8.0 * 0.8, emissive: 1.1) }
+    // And one contact material for all 150, for the same reason.
+    let contact = PhysicsMaterialResource.generate(
+        staticFriction: 0.35, dynamicFriction: 0.25, restitution: 0.35
+    )
     var generator = SystemRandomNumberGenerator()
 
     for i in 0..<count {
@@ -469,9 +472,7 @@ func setupForceField(
 
         body.components.set(CollisionComponent(shapes: [shape]))
         var physics = PhysicsBodyComponent(shapes: [shape], mass: 0.35, mode: .dynamic)
-        physics.material = PhysicsMaterialResource.generate(
-            staticFriction: 0.35, dynamicFriction: 0.25, restitution: 0.35
-        )
+        physics.material = contact
         // No SleepComponent here on purpose: the field never lets these rest,
         // so the solver load stays constant for the whole demo.
         body.components.set(physics)
@@ -505,6 +506,15 @@ private enum StressAssets {
     static let rowMaterials: [PhysicallyBasedMaterial] = (0..<8).map {
         Mat.hueCube(CGFloat($0) / 8.0 * 0.85, emissive: 0)
     }
+
+    // The one resource that sharing pass missed. PhysicsMaterialResource
+    // .generate was still being called inside the 8x8x8 loop, so the scene
+    // went in holding 512 distinct contact materials describing 512 identical
+    // cubes. Friction and restitution are properties of the cube, not of each
+    // cube.
+    static let physicsMaterial = PhysicsMaterialResource.generate(
+        staticFriction: 0.6, dynamicFriction: 0.4, restitution: 0.05
+    )
 }
 
 @MainActor
@@ -543,9 +553,7 @@ func setupTowerStress(
                     mass: 0.2,
                     mode: .dynamic
                 )
-                physics.material = PhysicsMaterialResource.generate(
-                    staticFriction: 0.6, dynamicFriction: 0.4, restitution: 0.05
-                )
+                physics.material = StressAssets.physicsMaterial
                 cube.components.set(physics)
                 cube.components.set(SleepComponent())
 

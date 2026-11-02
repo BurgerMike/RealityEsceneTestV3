@@ -160,11 +160,11 @@ echo
 
 if [ "$REPEATS" -gt 1 ]; then
     printf "%-14s %-13s %8s %7s %7s %9s %9s %7s %6s %6s\n" \
-        MODE PRESET AVG MIN MAX "1% LOW" P99 DROPPED CPU GPU
+        MODE PRESET AVG MIN MAX "1% LOW" P99 DROPPED CPU-PK GPU-PK
     printf '%.0s-' {1..94}; echo
 else
     printf "%-14s %-13s %8s %9s %9s %7s %6s %6s\n" \
-        MODE PRESET AVG "1% LOW" P99 DROPPED CPU GPU
+        MODE PRESET AVG "1% LOW" P99 DROPPED CPU-PK GPU-PK
     printf '%.0s-' {1..78}; echo
 fi
 

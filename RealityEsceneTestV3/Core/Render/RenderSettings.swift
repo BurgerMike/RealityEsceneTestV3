@@ -18,12 +18,14 @@ import RealityKit
 // MARK: - Preset
 
 enum QualityPreset: String, CaseIterable, Hashable {
+    case auto
     case performance
     case balanced
     case ultra
 
     var label: String {
         switch self {
+        case .auto:        return "AUTO"
         case .performance: return "PERFORMANCE"
         case .balanced:    return "BALANCED"
         case .ultra:       return "ULTRA"
@@ -32,16 +34,50 @@ enum QualityPreset: String, CaseIterable, Hashable {
 
     var hint: String {
         switch self {
+        case .auto:        return "picked from the window's pixel count"
         case .performance: return "no MSAA · no bloom · SDR"
         case .balanced:    return "MSAA 4x · bloom · HDR"
         case .ultra:       return "MSAA 4x · bloom · HDR · motion blur · DoF"
         }
+    }
+
+    // Which of the three fixed presets AUTO stands for at a given surface size.
+    //
+    // Every scene here is fill-rate bound, so the drawable's pixel count is
+    // the one number worth branching on — and MSAA 4x multiplies whatever that
+    // number is. The bands are the panels people actually sit in front of:
+    //
+    //   up to  9 Mpx   a 14-inch MacBook Pro (5.9) or a 4K display (8.3)
+    //   up to 16 Mpx   a 5K display (14.7)
+    //   above          6K and up (20.4), where offering ULTRA is a lie
+    //
+    // Deliberately three bands and not a continuous scale. --quality ultra has
+    // to mean the same thing on every machine or none of the numbers in the
+    // README can be compared to each other, so AUTO resolves to one of the
+    // documented presets and the benchmark summary prints which one it picked.
+    static func resolved(forSurfacePixels pixels: Double) -> QualityPreset {
+        // Before the first layout there is no drawable to measure. ULTRA is
+        // the configuration the README reports, so an unmeasured surface gets
+        // that rather than a guess, and the first layout corrects it.
+        guard pixels > 0 else { return .ultra }
+        if pixels > 16_000_000 { return .performance }
+        if pixels >  9_000_000 { return .balanced }
+        return .ultra
+    }
+
+    func resolving(surfacePixels pixels: Double) -> QualityPreset {
+        self == .auto ? Self.resolved(forSurfacePixels: pixels) : self
     }
 }
 
 // MARK: - Settings
 
 struct RenderSettings: Equatable {
+    // What was asked for, which may be .auto.
+    var selection: QualityPreset = .ultra
+
+    // What .auto worked out to. Never .auto itself, so everything downstream
+    // can keep switching on it exhaustively.
     var preset: QualityPreset = .ultra
 
     var multisampling   = true
@@ -64,9 +100,18 @@ struct RenderSettings: Equatable {
 
     init() {}
 
+    // Kept for the 1/2/3 hotkeys, which name a fixed preset and need no
+    // surface. An .auto passed here lands on ULTRA until the first layout
+    // reports a real size.
     init(preset: QualityPreset) {
-        self.preset = preset
-        switch preset {
+        self.init(preset, surfacePixels: 0)
+    }
+
+    init(_ selection: QualityPreset, surfacePixels: Double) {
+        let resolved = selection.resolving(surfacePixels: surfacePixels)
+        self.selection = selection
+        self.preset = resolved
+        switch resolved {
         case .performance:
             multisampling    = false
             highDynamicRange = false
@@ -86,7 +131,9 @@ struct RenderSettings: Equatable {
             bloomStrength    = 0.24
             exposure         = -0.15
             shadowDistance   = 15
-        case .ultra:
+        // .auto is already resolved away above; it shares this branch only to
+        // keep the switch exhaustive.
+        case .ultra, .auto:
             multisampling    = true
             highDynamicRange = true
             bloom            = true
@@ -97,7 +144,20 @@ struct RenderSettings: Equatable {
             exposure         = -0.15
             shadowDistance   = 22
         }
+
+        Self.activeLabel = benchmarkLabel
     }
+
+    // What the benchmark summary prints. An AUTO run has to say what it ran
+    // as, or its row cannot be compared with any other row.
+    var benchmarkLabel: String {
+        selection == .auto ? "AUTO (\(preset.label))" : preset.label
+    }
+
+    // Read by the benchmark summary, which lives in SceneRuntime and never
+    // sees the scene's settings. Same reason as toneMappingOwner below: the
+    // alternative is threading a label through four scenes that do not care.
+    @MainActor static var activeLabel = QualityPreset.ultra.label
 
     // One line per feature, so the HUD can list exactly what is switched on.
     var activeFeatures: [String] {
