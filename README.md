@@ -5,7 +5,7 @@ No engine, no packages, no asset files — and it tells you exactly what it cost
 
 ![Launcher](docs/launcher.jpg)
 
-macOS 27 · Swift 6.2 · RealityKit · SwiftUI · zero dependencies
+macOS 27 · Swift 6.4 · RealityKit · SwiftUI · zero dependencies
 
 ---
 
@@ -85,7 +85,7 @@ Press **E** to advance a channel.
 
 `LowLevelMesh` lets you declare a vertex layout and own the memory.
 `replace(bufferIndex:using:)` hands that memory back as an `MTLBuffer`, so the
-36 864 positions and normals of this surface are written by a compute kernel on
+38 400 positions and normals of this surface are written by a compute kernel on
 the same GPU that is about to draw them. The indices are written once — the
 grid's topology never changes — and nothing is ever uploaded: the only thing
 crossing from Swift is nine floats of parameters. Normals come from central
@@ -298,7 +298,7 @@ RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3 \
 | `TextComponent` + `BillboardComponent` | in-world captions that always face the camera |
 | `PortalComponent` + `WorldComponent` | three windows onto three separate worlds, each with its own floor and lights |
 | `ModelDebugOptionsComponent` | a PBR material taken apart one shading channel at a time |
-| `LowLevelMesh` | a 36 864-vertex surface whose positions and normals are rewritten by a Metal compute kernel every frame |
+| `LowLevelMesh` | a 38 400-vertex surface whose positions and normals are rewritten by a Metal compute kernel every frame |
 
 ### Physics
 
