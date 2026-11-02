@@ -34,6 +34,18 @@ xcodebuild -project "$PROJECT_DIR/RealityEsceneTestV3.xcodeproj" \
 APP="$BUILD_DIR/RealityEsceneTestV3.app/Contents/MacOS/RealityEsceneTestV3"
 [ -x "$APP" ] || { echo "Binary not found at $APP"; exit 1; }
 
+# Hold the display awake for the whole sweep, and let go the moment this
+# script exits.
+#
+# A sleeping display is not a cosmetic problem here. macOS reports every
+# window as not visible once the screen is off and throttles what they draw,
+# so a sweep left politely alone - which is exactly what a careful person
+# does, and exactly what this script asks for - puts the machine to sleep
+# partway through and discards everything after it. The first full run of
+# this script lost at least one pass on all seventeen rows that way, and the
+# last four rows lost two of three.
+caffeinate -di -w $$ &
+
 # Name the machine. A frame rate without one is not a result, and the whole
 # point of shipping this script is that someone else can run it and say what
 # their own Mac did.
